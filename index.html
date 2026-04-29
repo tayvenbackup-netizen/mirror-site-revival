@@ -553,6 +553,217 @@ FREE APP BTW IF YOU PAID YOU GOT SCAMMED HAHA LOSER</h2>
 </div>
 
 
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- Wallet Action Flows: Send / Receive / Swap / Buy                     -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- ───────── Token Picker (shared by Send + Receive) ───────── -->
+<div id="tpOverlay" class="tp-overlay" aria-hidden="true">
+  <div id="tpSheet" class="tp-sheet" role="dialog" aria-modal="true">
+    <div class="tp-header">
+      <button class="tp-close" id="tpClose" aria-label="Close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <h2 class="tp-title" id="tpTitle">Send</h2>
+      <span class="tp-spacer"></span>
+    </div>
+    <div class="tp-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="tpSearch" type="text" placeholder="Search" autocomplete="off" />
+    </div>
+    <div class="tp-chains" id="tpChains"></div>
+    <div class="tp-section-label" id="tpPopularLabel" style="display:none;">Popular</div>
+    <div class="tp-list" id="tpPopular" style="display:none;"></div>
+    <div class="tp-section-label" id="tpAllLabel" style="display:none;">All crypto</div>
+    <div class="tp-list" id="tpList"></div>
+  </div>
+</div>
+
+<!-- ───────── Send Detail Page ───────── -->
+<div id="sendPage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="sendPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">Send <span id="sendCoinSym">USDT</span></h2>
+    <button class="fp-close" data-close="sendPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="fp-body">
+    <label class="fp-label">Address or Domain Name</label>
+    <div class="fp-input-wrap" id="sendAddrWrap">
+      <input id="sendAddr" type="text" placeholder="Search or Enter" />
+      <button class="fp-paste">Paste</button>
+      <button class="fp-icon-btn" aria-label="Address book"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="11" cy="10" r="2.2" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 16.5c.8-1.6 2.1-2.4 3.5-2.4s2.7.8 3.5 2.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <button class="fp-icon-btn" aria-label="Scan"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+    <label class="fp-label" style="margin-top:18px;">Destination network</label>
+    <button class="fp-network">
+      <img id="sendNetIcon" alt="" />
+      <span id="sendNetName">Tron</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <label class="fp-label" style="margin-top:18px;">Amount</label>
+    <div class="fp-amount-wrap">
+      <input id="sendAmount" type="text" inputmode="decimal" placeholder="0" />
+      <span class="fp-amount-sym" id="sendAmountSym">USDT</span>
+      <button class="fp-max" id="sendMax">Max</button>
+    </div>
+    <div class="fp-amount-fiat" id="sendAmountFiat">≈ $0.00</div>
+    <label class="fp-label" style="margin-top:18px;">Memo</label>
+    <div class="fp-memo-wrap">
+      <input id="sendMemo" type="text" placeholder="" />
+      <button class="fp-icon-btn" aria-label="Scan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button class="fp-icon-btn" aria-label="Info"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>
+  <div class="fp-cta-bar">
+    <button class="fp-cta" id="sendNext">Next</button>
+  </div>
+</div>
+
+<!-- ───────── Receive Detail Page (QR) ───────── -->
+<div id="receivePage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="receivePage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <h2 class="fp-title">Receive</h2>
+    <button class="fp-close" aria-label="Info"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="rcv-banner">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3l9-16z" stroke="#f0b90b" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4M12 16.2v.1" stroke="#f0b90b" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Only send <b id="rcvCoinName">Bitcoin (BTC)</b> assets to this address.<br/>Other assets will be lost forever.</span>
+  </div>
+  <div class="rcv-coin-pill">
+    <img id="rcvCoinIcon" alt="" />
+    <div class="rcv-coin-text"><div id="rcvCoinSym">BTC</div><div class="rcv-coin-net" id="rcvCoinNet">Bitcoin</div></div>
+  </div>
+  <div class="rcv-qr-wrap">
+    <div class="rcv-qr" id="rcvQr"></div>
+  </div>
+  <div class="rcv-addr" id="rcvAddr">bc1qymxts7gx8uirw88rc7v2rhscz7mjmg2vxk9ge7</div>
+  <div class="rcv-actions">
+    <button class="rcv-action" id="rcvCopy"><span class="rcv-action-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.8"/></svg></span><span>Copy</span></button>
+    <button class="rcv-action"><span class="rcv-action-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M12 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>Set Amount</span></button>
+    <button class="rcv-action" id="rcvShare"><span class="rcv-action-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l-4 4M12 3l4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Share</span></button>
+  </div>
+  <div class="rcv-deposit">
+    <span class="rcv-deposit-ic">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 19c0-7 5-13 14-13-1 8-5 13-14 13z" fill="#3CC68A"/><path d="M5 19c2-4 5-7 9-9" stroke="#0f1010" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </span>
+    <div>
+      <div class="rcv-deposit-title">Deposit from exchange</div>
+      <div class="rcv-deposit-sub">By direct transfer from your account</div>
+    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</div>
+
+<!-- ───────── Swap Page ───────── -->
+<div id="swapPage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="swapPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">Swap</h2>
+    <button class="fp-close" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h13M4 17h13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="7" r="2" fill="currentColor"/><circle cx="9" cy="17" r="2" fill="currentColor"/></svg></button>
+  </div>
+  <div class="sw-cards">
+    <div class="sw-card" id="swFromCard">
+      <input class="sw-amount" id="swFromAmount" type="text" inputmode="none" readonly value="0" />
+      <button class="sw-token" id="swFromBtn"><img id="swFromIcon" alt=""/><span id="swFromSym">USDT</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="sw-fiat" id="swFromFiat">$0.00</div>
+      <div class="sw-bal" id="swFromBal">80228.601</div>
+    </div>
+    <button class="sw-flip" id="swFlip" aria-label="Flip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 5v12M8 17l-3-3M8 17l3-3M16 19V7M16 7l-3 3M16 7l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="sw-card" id="swToCard">
+      <div class="sw-amount" id="swToAmount">0</div>
+      <button class="sw-token" id="swToBtn"><img id="swToIcon" alt=""/><span id="swToSym">ETH</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="sw-fiat" id="swToFiat">$0.00</div>
+      <div class="sw-bal" id="swToBal">0</div>
+    </div>
+  </div>
+  <div class="sw-quote-line" id="swQuoteLine">
+    <span id="swMinReceived"></span>
+    <button class="sw-pricing" id="swPricingBtn">Pricing details <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="sw-slider">
+    <div class="sw-slider-labels"><span>Min</span><span>25%</span><span>50%</span><span>75%</span><span>Max</span></div>
+    <div class="sw-slider-track"><div class="sw-slider-fill" id="swSliderFill"></div><div class="sw-slider-thumb" id="swSliderThumb"></div></div>
+  </div>
+  <div class="sw-keypad" id="swKeypad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button data-k=".">.</button><button data-k="0">0</button><button data-k="del" aria-label="Delete"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 5h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-7-7 7-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 9l5 5M18 9l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="sw-cta-bar">
+    <button class="sw-slide" id="swSlide" disabled>
+      <div class="sw-slide-thumb"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="sw-slide-label" id="swSlideLabel">Slide to Swap</span>
+    </button>
+  </div>
+</div>
+
+<!-- ───────── Swap Details bottom sheet ───────── -->
+<div id="swDetailsOverlay" class="tp-overlay" aria-hidden="true">
+  <div class="tp-sheet" id="swDetailsSheet" style="max-height:auto;">
+    <div class="tp-header">
+      <span class="tp-spacer"></span>
+      <h2 class="tp-title">Swap details</h2>
+      <button class="tp-close" id="swDetailsClose" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="sw-detail-rows" id="swDetailRows"></div>
+  </div>
+</div>
+
+<!-- ───────── Order Submitted ───────── -->
+<div id="swOrderPage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="swOrderPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title" id="swOrderTitle">USDT → ETH</h2>
+    <span class="fp-spacer"></span>
+  </div>
+  <div class="ord-body">
+    <div class="ord-icon"><div class="ord-blob"></div></div>
+    <div class="ord-pill"><span class="ord-pill-dot"></span>Pending</div>
+    <h3 class="ord-title">Order submitted!</h3>
+    <p class="ord-sub">We'll let you know once your swap goes through successfully</p>
+    <button class="fp-cta" id="swOrderDone">Done</button>
+    <button class="ord-link">View transaction details</button>
+    <div class="ord-suggest-label">You might also like</div>
+    <div class="ord-suggest" id="swSuggest"></div>
+    <button class="ord-again">Swap again</button>
+  </div>
+</div>
+
+<!-- ───────── Buy Page ───────── -->
+<div id="buyPage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="buyPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">Buy</h2>
+    <button class="fp-close" aria-label="More"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/></svg></button>
+  </div>
+  <div class="buy-body">
+    <div class="buy-row">
+      <div class="buy-amount" id="buyFiatAmount">250</div>
+      <button class="buy-pill"><span class="buy-flag">🇺🇸</span><span>USD</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="buy-row buy-row-sub">
+      <div class="buy-amount-sub" id="buyCryptoAmount">0.0032873</div>
+      <button class="buy-pill"><img src="https://wsrv.nl/?url=https://assets-cdn.trustwallet.com/blockchains/bitcoin/info/logo.png" alt="" /><span>BTC</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <button class="buy-pay">
+      <div class="buy-pay-icons"><span class="buy-visa">VISA</span><span class="buy-mc"><span></span><span></span></span></div>
+      <div class="buy-pay-text"><div class="buy-pay-label">Pay with</div><div class="buy-pay-name">Card</div></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="buy-keypad" id="buyKeypad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button data-k=".">.</button><button data-k="0">0</button><button data-k="del" aria-label="Delete"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 5h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-7-7 7-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 9l5 5M18 9l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="fp-cta-bar buy-cta-bar">
+    <button class="fp-cta" id="buyContinue">Continue</button>
+  </div>
+</div>
+
 <script src="/js/trust.js?v=10"></script>
 
 
