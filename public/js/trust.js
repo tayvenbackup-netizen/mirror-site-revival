@@ -1121,6 +1121,87 @@ document.addEventListener('keydown', e => {
 
   // ── Buy ─────────────────────────────────────────────
   let buyAmount = '250';
+
+  // ── Send Confirm / Processing / Sent ────────────────
+  let lastSend = null; // { token, amount, fiat, toAddr, fromAddr, fee, feeFiat, date }
+
+  function _ownAddrFor(t) { return addrFor(t); }
+  function _feeFor(t) {
+    // Per-network mock fee (in token units) and approx USD
+    const fees = {
+      sol:  { coin: 0.00090638, usd: 0.06 },
+      eth:  { coin: 0.00012,    usd: 0.42 },
+      bnb:  { coin: 0.00021,    usd: 0.13 },
+      trx:  { coin: 1.1,        usd: 0.30 },
+      btc:  { coin: 0.00000142, usd: 0.13 },
+      avax: { coin: 0.00041,    usd: 0.014 },
+      ton:  { coin: 0.0055,     usd: 0.04 },
+    };
+    return fees[t.chain] || fees.eth;
+  }
+  function _fmtDate(d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let h = d.getHours(); const m = d.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${h}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+
+  function openSendConfirm() {
+    if (!sendToken) return;
+    const amount = parseFloat($('#sendAmount').value) || 0;
+    const toAddr = $('#sendAddr').value.trim();
+    const fromAddr = _ownAddrFor(sendToken);
+    const fee = _feeFor(sendToken);
+    const fiat = amount * 1; // rough; would be real if price known
+    const s = loadSettings();
+    lastSend = {
+      token: sendToken, amount, fiat, toAddr, fromAddr,
+      fee: fee.coin, feeFiat: fee.usd, walletName: s.walletName || 'Main Wallet',
+      date: new Date(),
+    };
+    $('#scTokenIcon').src = sendToken.icon;
+    $('#scAmtFiat').textContent = `$${fiat.toFixed(2)}`;
+    $('#scAmtCoin').textContent = `${formatBal(amount) || amount} ${sendToken.sym}`;
+    $('#scFromName').textContent = lastSend.walletName;
+    $('#scFromAddr').textContent = shortAddr(fromAddr);
+    $('#scToAddr').textContent = shortAddr(toAddr) || '—';
+    $('#scNetwork').textContent = sendToken.net;
+    $('#scFeeIcon').src = sendToken.icon;
+    $('#scFeeFiat').textContent = `$${fee.usd.toFixed(2)}`;
+    $('#scFeeCoin').textContent = `${fee.coin} ${sendToken.sym}`;
+    $('#scTotal').textContent = `$${(fiat + fee.usd).toFixed(2)}`;
+    openOverlay('sendConfirmPage');
+  }
+
+  let _spTimer = null;
+  function startSendProcessing() {
+    // Close the confirm page and the underlying send/picker so the processing
+    // sheet appears over the home screen (matches reference).
+    closeOverlay('sendConfirmPage');
+    closeOverlay('sendPage');
+    closeOverlay('tpOverlay');
+    setTimeout(() => openOverlay('sendProcessingOverlay'), 300);
+    if (_spTimer) clearTimeout(_spTimer);
+    _spTimer = setTimeout(() => {
+      closeOverlay('sendProcessingOverlay');
+      setTimeout(openSentPage, 250);
+    }, 5000);
+  }
+
+  function openSentPage() {
+    if (!lastSend) return;
+    const t = lastSend.token;
+    $('#ssAmtFiat').textContent = `$${lastSend.fiat.toFixed(4)}`;
+    $('#ssAmtCoin').textContent = `-${formatBal(lastSend.amount) || lastSend.amount} ${t.sym}`;
+    $('#ssDate').textContent = _fmtDate(lastSend.date);
+    $('#ssStatus').textContent = 'Pending';
+    $('#ssRecipient').textContent = shortAddr(lastSend.toAddr);
+    $('#ssFeeCoin').textContent = `${lastSend.fee} ${t.sym}`;
+    $('#ssFeeFiat').textContent = `≈ $${lastSend.feeFiat.toFixed(4)}`;
+    openOverlay('sendSentPage');
+  }
+
   function renderBuy() {
     $('#buyFiatAmount').textContent = buyAmount || '0';
     const a = parseFloat(buyAmount) || 0;
