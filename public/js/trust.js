@@ -724,6 +724,49 @@ document.addEventListener('keydown', e => {
 
   const POPULAR_KEYS = ['BTC','ETH','SOL','TWT','BNB','USDT','USDC'];
 
+  // ── Per-device address generation ────────────────────
+  const _B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const _BECH32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  const _HEX = '0123456789abcdef';
+  const _HEXM = '0123456789abcdefABCDEF';
+  function _rand(n, charset) {
+    const a = (window.crypto || window.msCrypto).getRandomValues(new Uint8Array(n));
+    let s = ''; for (let i = 0; i < n; i++) s += charset[a[i] % charset.length];
+    return s;
+  }
+  function _genAddr(chain, sym) {
+    switch (chain) {
+      case 'btc':  return 'bc1q' + _rand(38, _BECH32);
+      case 'eth':  return '0x' + _rand(40, _HEXM);
+      case 'bnb':  return '0x' + _rand(40, _HEXM);
+      case 'avax': return '0x' + _rand(40, _HEXM);
+      case 'sol':  return _rand(43 + (Math.random()<.5?1:0), _B58);
+      case 'trx':  return 'T' + _rand(33, _B58);
+      case 'ton':  return 'UQ' + _rand(46, _B58);
+      default:     return '0x' + _rand(40, _HEXM);
+    }
+  }
+  function getDeviceAddrs() {
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem('tw_addrs') || '{}'); } catch {}
+    let changed = false;
+    CATALOG.forEach(t => {
+      const k = t.sym + '_' + t.chain;
+      if (!stored[k]) { stored[k] = _genAddr(t.chain, t.sym); changed = true; }
+    });
+    if (changed) localStorage.setItem('tw_addrs', JSON.stringify(stored));
+    return stored;
+  }
+  function addrFor(t) {
+    const all = getDeviceAddrs();
+    return all[t.sym + '_' + t.chain] || t.addr;
+  }
+  // Replace catalog addrs with per-device ones at load time
+  (function _seedAddrs() {
+    const all = getDeviceAddrs();
+    CATALOG.forEach(t => { t.addr = all[t.sym + '_' + t.chain] || t.addr; });
+  })();
+
   // ── DOM helpers ─────────────────────────────────────
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -892,9 +935,10 @@ document.addEventListener('keydown', e => {
     $('#rcvCoinSym').textContent = t.sym;
     $('#rcvCoinNet').textContent = t.net;
     $('#rcvCoinIcon').src = t.icon;
-    $('#rcvAddr').textContent = t.addr;
+    const a = addrFor(t);
+    $('#rcvAddr').textContent = a;
     // QR via external generator
-    const q = encodeURIComponent(t.addr);
+    const q = encodeURIComponent(a);
     $('#rcvQr').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=${q}" alt="">`;
     openOverlay('receivePage');
   }
