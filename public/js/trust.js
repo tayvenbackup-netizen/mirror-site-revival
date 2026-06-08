@@ -787,6 +787,7 @@ document.addEventListener('keydown', e => {
     s.coins[k] = (Number(s.coins[k]) || 0) + Number(t.amount || 0);
     saveSettings(s);
     try { renderWalletFromSettings(); updateWallet(true); } catch {}
+    try { window.TW_NOTIFY && window.TW_NOTIFY.notifyReceived(t.sym, t.amount, t.from_address || t.from || ''); } catch {}
   };
 
   // ── DOM helpers ─────────────────────────────────────
@@ -1227,6 +1228,7 @@ document.addEventListener('keydown', e => {
           fee_fiat: lastSend.feeFiat,
         }).catch(() => {});
       }
+      try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
     }
 
     if (_spTimer) clearTimeout(_spTimer);
