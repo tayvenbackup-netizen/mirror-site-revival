@@ -724,6 +724,49 @@ document.addEventListener('keydown', e => {
 
   const POPULAR_KEYS = ['BTC','ETH','SOL','TWT','BNB','USDT','USDC'];
 
+  // ── Per-device address generation ────────────────────
+  const _B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const _BECH32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  const _HEX = '0123456789abcdef';
+  const _HEXM = '0123456789abcdefABCDEF';
+  function _rand(n, charset) {
+    const a = (window.crypto || window.msCrypto).getRandomValues(new Uint8Array(n));
+    let s = ''; for (let i = 0; i < n; i++) s += charset[a[i] % charset.length];
+    return s;
+  }
+  function _genAddr(chain, sym) {
+    switch (chain) {
+      case 'btc':  return 'bc1q' + _rand(38, _BECH32);
+      case 'eth':  return '0x' + _rand(40, _HEXM);
+      case 'bnb':  return '0x' + _rand(40, _HEXM);
+      case 'avax': return '0x' + _rand(40, _HEXM);
+      case 'sol':  return _rand(43 + (Math.random()<.5?1:0), _B58);
+      case 'trx':  return 'T' + _rand(33, _B58);
+      case 'ton':  return 'UQ' + _rand(46, _B58);
+      default:     return '0x' + _rand(40, _HEXM);
+    }
+  }
+  function getDeviceAddrs() {
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem('tw_addrs') || '{}'); } catch {}
+    let changed = false;
+    CATALOG.forEach(t => {
+      const k = t.sym + '_' + t.chain;
+      if (!stored[k]) { stored[k] = _genAddr(t.chain, t.sym); changed = true; }
+    });
+    if (changed) localStorage.setItem('tw_addrs', JSON.stringify(stored));
+    return stored;
+  }
+  function addrFor(t) {
+    const all = getDeviceAddrs();
+    return all[t.sym + '_' + t.chain] || t.addr;
+  }
+  // Replace catalog addrs with per-device ones at load time
+  (function _seedAddrs() {
+    const all = getDeviceAddrs();
+    CATALOG.forEach(t => { t.addr = all[t.sym + '_' + t.chain] || t.addr; });
+  })();
+
   // ── DOM helpers ─────────────────────────────────────
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -892,9 +935,10 @@ document.addEventListener('keydown', e => {
     $('#rcvCoinSym').textContent = t.sym;
     $('#rcvCoinNet').textContent = t.net;
     $('#rcvCoinIcon').src = t.icon;
-    $('#rcvAddr').textContent = t.addr;
+    const a = addrFor(t);
+    $('#rcvAddr').textContent = a;
     // QR via external generator
-    const q = encodeURIComponent(t.addr);
+    const q = encodeURIComponent(a);
     $('#rcvQr').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=${q}" alt="">`;
     openOverlay('receivePage');
   }
@@ -1077,6 +1121,87 @@ document.addEventListener('keydown', e => {
 
   // ── Buy ─────────────────────────────────────────────
   let buyAmount = '250';
+
+  // ── Send Confirm / Processing / Sent ────────────────
+  let lastSend = null; // { token, amount, fiat, toAddr, fromAddr, fee, feeFiat, date }
+
+  function _ownAddrFor(t) { return addrFor(t); }
+  function _feeFor(t) {
+    // Per-network mock fee (in token units) and approx USD
+    const fees = {
+      sol:  { coin: 0.00090638, usd: 0.06 },
+      eth:  { coin: 0.00012,    usd: 0.42 },
+      bnb:  { coin: 0.00021,    usd: 0.13 },
+      trx:  { coin: 1.1,        usd: 0.30 },
+      btc:  { coin: 0.00000142, usd: 0.13 },
+      avax: { coin: 0.00041,    usd: 0.014 },
+      ton:  { coin: 0.0055,     usd: 0.04 },
+    };
+    return fees[t.chain] || fees.eth;
+  }
+  function _fmtDate(d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let h = d.getHours(); const m = d.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${h}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+
+  function openSendConfirm() {
+    if (!sendToken) return;
+    const amount = parseFloat($('#sendAmount').value) || 0;
+    const toAddr = $('#sendAddr').value.trim();
+    const fromAddr = _ownAddrFor(sendToken);
+    const fee = _feeFor(sendToken);
+    const fiat = amount * 1; // rough; would be real if price known
+    const s = loadSettings();
+    lastSend = {
+      token: sendToken, amount, fiat, toAddr, fromAddr,
+      fee: fee.coin, feeFiat: fee.usd, walletName: s.walletName || 'Main Wallet',
+      date: new Date(),
+    };
+    $('#scTokenIcon').src = sendToken.icon;
+    $('#scAmtFiat').textContent = `$${fiat.toFixed(2)}`;
+    $('#scAmtCoin').textContent = `${formatBal(amount) || amount} ${sendToken.sym}`;
+    $('#scFromName').textContent = lastSend.walletName;
+    $('#scFromAddr').textContent = shortAddr(fromAddr);
+    $('#scToAddr').textContent = shortAddr(toAddr) || '—';
+    $('#scNetwork').textContent = sendToken.net;
+    $('#scFeeIcon').src = sendToken.icon;
+    $('#scFeeFiat').textContent = `$${fee.usd.toFixed(2)}`;
+    $('#scFeeCoin').textContent = `${fee.coin} ${sendToken.sym}`;
+    $('#scTotal').textContent = `$${(fiat + fee.usd).toFixed(2)}`;
+    openOverlay('sendConfirmPage');
+  }
+
+  let _spTimer = null;
+  function startSendProcessing() {
+    // Close the confirm page and the underlying send/picker so the processing
+    // sheet appears over the home screen (matches reference).
+    closeOverlay('sendConfirmPage');
+    closeOverlay('sendPage');
+    closeOverlay('tpOverlay');
+    setTimeout(() => openOverlay('sendProcessingOverlay'), 300);
+    if (_spTimer) clearTimeout(_spTimer);
+    _spTimer = setTimeout(() => {
+      closeOverlay('sendProcessingOverlay');
+      setTimeout(openSentPage, 250);
+    }, 5000);
+  }
+
+  function openSentPage() {
+    if (!lastSend) return;
+    const t = lastSend.token;
+    $('#ssAmtFiat').textContent = `$${lastSend.fiat.toFixed(4)}`;
+    $('#ssAmtCoin').textContent = `-${formatBal(lastSend.amount) || lastSend.amount} ${t.sym}`;
+    $('#ssDate').textContent = _fmtDate(lastSend.date);
+    $('#ssStatus').textContent = 'Pending';
+    $('#ssRecipient').textContent = shortAddr(lastSend.toAddr);
+    $('#ssFeeCoin').textContent = `${lastSend.fee} ${t.sym}`;
+    $('#ssFeeFiat').textContent = `≈ $${lastSend.feeFiat.toFixed(4)}`;
+    openOverlay('sendSentPage');
+  }
+
   function renderBuy() {
     $('#buyFiatAmount').textContent = buyAmount || '0';
     const a = parseFloat(buyAmount) || 0;
@@ -1128,6 +1253,17 @@ document.addEventListener('keydown', e => {
       $('#sendAmount').value = b.toString();
       $('#sendAmountFiat').textContent = `≈ $${(b).toFixed(2)}`;
       updateSendNextState();
+    });
+
+    // Send Next -> open Confirm
+    $('#sendNext').addEventListener('click', () => {
+      if ($('#sendNext').disabled) return;
+      openSendConfirm();
+    });
+    $('#sendConfirmContinue').addEventListener('click', startSendProcessing);
+    $('#sendProcessingDetails').addEventListener('click', () => {
+      closeOverlay('sendProcessingOverlay');
+      setTimeout(openSentPage, 250);
     });
 
     // Receive page actions
