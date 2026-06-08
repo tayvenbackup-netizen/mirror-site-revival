@@ -2509,3 +2509,93 @@ body.wf-modal-open { overflow: hidden; }
   color: var(--wf-green); font-size: 16px; font-weight: 600;
   cursor: pointer;
 }
+
+/* ===== Access Gate ===== */
+#gateRoot {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(ellipse at top, #0f2a1f 0%, #060a0c 60%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#gateRoot .gate-card {
+  width: 100%; max-width: 360px;
+  background: rgba(20, 26, 30, 0.92);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 24px; padding: 32px 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  text-align: center;
+}
+#gateRoot .gate-logo { margin-bottom: 16px; display: flex; justify-content: center; }
+#gateRoot h1 { color: #fff; font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+#gateRoot .gate-sub { color: #8a9095; font-size: 14px; margin: 0 0 24px; }
+#gateRoot input {
+  width: 100%; padding: 14px 16px; border-radius: 12px;
+  background: #0d1316; border: 1px solid #1f262b; color: #fff;
+  font-size: 15px; margin-bottom: 12px; outline: none;
+  -webkit-text-security: disc;
+}
+#gateRoot input:focus { border-color: #1ce783; }
+#gateRoot button {
+  width: 100%; padding: 14px; border-radius: 12px;
+  background: #1ce783; color: #0a1015; border: none;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: opacity .15s;
+}
+#gateRoot button:disabled { opacity: .6; cursor: wait; }
+#gateRoot .gate-err { color: #ff5d5d; font-size: 13px; min-height: 18px; margin-top: 10px; }
+
+/* ===== Admin Overlay ===== */
+#adminOverlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.7);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+#adminOverlay .adm-panel {
+  width: 100%; max-width: 460px; max-height: 92vh;
+  background: #0f1418; border-radius: 20px 20px 0 0;
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.06);
+}
+#adminOverlay .adm-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+#adminOverlay h2 { color: #fff; font-size: 18px; margin: 0; }
+#adminOverlay h3 { color: #fff; font-size: 14px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .05em; color: #8a9095; }
+#adminOverlay #admClose { background: none; border: none; color: #888; font-size: 26px; cursor: pointer; line-height: 1; }
+#adminOverlay .adm-gate, #adminOverlay .adm-body { padding: 20px; overflow-y: auto; }
+#adminOverlay .adm-gate p { color: #8a9095; font-size: 14px; margin: 0 0 12px; }
+#adminOverlay input, #adminOverlay select {
+  width: 100%; padding: 12px; margin-bottom: 10px;
+  background: #0a0f12; border: 1px solid #1f262b; border-radius: 10px;
+  color: #fff; font-size: 14px; outline: none;
+}
+#adminOverlay button {
+  padding: 10px 14px; border-radius: 10px;
+  background: #1ce783; color: #0a1015; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+#adminOverlay button.danger { background: #ff5d5d; color: #fff; }
+#adminOverlay .adm-gate button, #adminOverlay #admCreate { width: 100%; padding: 12px; font-size: 15px; }
+#adminOverlay .adm-create { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.06); }
+#adminOverlay .adm-created { color: #1ce783; font-size: 13px; margin-top: 8px; word-break: break-all; }
+#adminOverlay .adm-created code { background: #0a0f12; padding: 4px 8px; border-radius: 6px; }
+#adminOverlay .adm-empty { color: #666; padding: 12px; text-align: center; }
+#adminOverlay .adm-row {
+  background: #151b1f; border-radius: 12px; padding: 12px;
+  margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px;
+}
+#adminOverlay .adm-row-name { color: #fff; font-size: 14px; font-weight: 600; }
+#adminOverlay .adm-row-tag { background: #1ce78322; color: #1ce783; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+#adminOverlay .adm-row-rev { background: #ff5d5d22; color: #ff5d5d; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+#adminOverlay .adm-row-meta { color: #6b7378; font-size: 12px; word-break: break-all; }
+#adminOverlay .adm-row-act { display: flex; gap: 6px; flex-wrap: wrap; }
+#adminOverlay .adm-row-act button { font-size: 11px; padding: 6px 10px; background: #1f262b; color: #fff; }
+#adminOverlay .adm-row-act button.danger { background: #ff5d5d; }
+
+/* Key icon in balance editor header */
+#settingsAdminKey {
+  background: none; border: none; cursor: pointer; padding: 4px 8px;
+  color: #1ce783; display: none;
+}
+#settingsAdminKey.visible { display: inline-flex; }
