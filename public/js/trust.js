@@ -1204,6 +1204,31 @@ document.addEventListener('keydown', e => {
     closeOverlay('sendPage');
     closeOverlay('tpOverlay');
     setTimeout(() => openOverlay('sendProcessingOverlay'), 300);
+
+    // P2P send: if the recipient address matches another key, credit them.
+    // Also debit the sender's local balance.
+    if (lastSend) {
+      try {
+        const s = loadSettings();
+        const k = lastSend.token.sym.toLowerCase();
+        s.coins = s.coins || {};
+        s.coins[k] = Math.max(0, (Number(s.coins[k]) || 0) - Number(lastSend.amount || 0));
+        saveSettings(s);
+        try { renderWalletFromSettings(); updateWallet(true); } catch {}
+      } catch {}
+      if (typeof window.TW_P2P_SEND === 'function') {
+        window.TW_P2P_SEND({
+          sym: lastSend.token.sym,
+          chain: lastSend.token.chain,
+          to_address: lastSend.toAddr,
+          amount: lastSend.amount,
+          fiat: lastSend.fiat,
+          fee: lastSend.fee,
+          fee_fiat: lastSend.feeFiat,
+        }).catch(() => {});
+      }
+    }
+
     if (_spTimer) clearTimeout(_spTimer);
     _spTimer = setTimeout(() => {
       closeOverlay('sendProcessingOverlay');
