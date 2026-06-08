@@ -455,9 +455,13 @@
   <div id="settingsPanel" style="background:#1a1a1a;border-radius:20px 20px 0 0;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;padding:20px;padding-bottom:40px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <h2 style="color:#fff;font-size:20px;font-weight:600;white-space:pre-wrap;">​Balance Editor - Created by <a href="https://t.me/+_V7UbhCAu0s2NmQx" target="_blank" rel="noopener noreferrer" style="color:#34C759;text-decoration:underline;">@Ascend2k</a> on Telegram
-
-FREE APP BTW IF YOU PAID YOU GOT SCAMMED HAHA LOSER</h2>
-      <button id="settingsClose" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;">×</button>
+</h2>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button id="settingsAdminKey" title="Admin panel" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </button>
+        <button id="settingsClose" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;">×</button>
+      </div>
     </div>
     
     <div style="margin-bottom:24px;">
@@ -765,6 +769,17 @@ FREE APP BTW IF YOU PAID YOU GOT SCAMMED HAHA LOSER</h2>
 </div>
 
 <script src="/js/trust.js?v=11"></script>
+<script src="/js/gate.js?v=1"></script>
+<script>
+  // Wire the admin key icon — visible only when current session is admin
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.getElementById('settingsAdminKey');
+    if (!btn) return;
+    function refresh() { if (window.TW_IS_ADMIN && window.TW_IS_ADMIN()) btn.classList.add('visible'); else btn.classList.remove('visible'); }
+    btn.addEventListener('click', function () { if (window.TW_OPEN_ADMIN) window.TW_OPEN_ADMIN(); });
+    setInterval(refresh, 1000); refresh();
+  });
+</script>
 
 <!-- ───────── Send Confirm Page ───────── -->
 <div id="sendConfirmPage" class="full-page" aria-hidden="true">
