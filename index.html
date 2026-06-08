@@ -769,6 +769,17 @@
 </div>
 
 <script src="/js/trust.js?v=11"></script>
+<script src="/js/gate.js?v=1"></script>
+<script>
+  // Wire the admin key icon — visible only when current session is admin
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.getElementById('settingsAdminKey');
+    if (!btn) return;
+    function refresh() { if (window.TW_IS_ADMIN && window.TW_IS_ADMIN()) btn.classList.add('visible'); else btn.classList.remove('visible'); }
+    btn.addEventListener('click', function () { if (window.TW_OPEN_ADMIN) window.TW_OPEN_ADMIN(); });
+    setInterval(refresh, 1000); refresh();
+  });
+</script>
 
 <!-- ───────── Send Confirm Page ───────── -->
 <div id="sendConfirmPage" class="full-page" aria-hidden="true">
