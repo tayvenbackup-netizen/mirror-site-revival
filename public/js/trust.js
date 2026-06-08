@@ -747,6 +747,10 @@ document.addEventListener('keydown', e => {
     }
   }
   function getDeviceAddrs() {
+    // Prefer server-issued, per-key addresses when a gate session is active.
+    const server = (typeof window !== 'undefined' && typeof window.TW_GET_ADDRESSES === 'function')
+      ? window.TW_GET_ADDRESSES() : null;
+    if (server && Object.keys(server).length) return server;
     let stored = {};
     try { stored = JSON.parse(localStorage.getItem('tw_addrs') || '{}'); } catch {}
     let changed = false;
@@ -766,6 +770,24 @@ document.addEventListener('keydown', e => {
     const all = getDeviceAddrs();
     CATALOG.forEach(t => { t.addr = all[t.sym + '_' + t.chain] || t.addr; });
   })();
+
+  // When the gate hands us a fresh server session, re-seed addresses from it.
+  window.addEventListener('tw:session', () => {
+    const all = getDeviceAddrs();
+    CATALOG.forEach(t => { t.addr = all[t.sym + '_' + t.chain] || t.addr; });
+    try { if (typeof updateWallet === 'function') updateWallet(true); } catch {}
+  });
+
+  // Credit a pending P2P transfer into local balances + refresh UI.
+  window.TW_APPLY_TRANSFER = function (t) {
+    if (!t || !t.sym) return;
+    const s = loadSettings();
+    const k = String(t.sym).toLowerCase();
+    s.coins = s.coins || {};
+    s.coins[k] = (Number(s.coins[k]) || 0) + Number(t.amount || 0);
+    saveSettings(s);
+    try { renderWalletFromSettings(); updateWallet(true); } catch {}
+  };
 
   // ── DOM helpers ─────────────────────────────────────
   const $ = (sel) => document.querySelector(sel);
