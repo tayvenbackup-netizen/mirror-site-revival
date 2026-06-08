@@ -463,7 +463,13 @@
         <button id="settingsClose" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;">×</button>
       </div>
     </div>
-    
+
+    <div class="pe-tabs" style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:20px;">
+      <button class="pe-tab active" data-petab="balances" style="flex:1;padding:10px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Balances</button>
+      <button class="pe-tab" data-petab="notif" style="flex:1;padding:10px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Notification Generator</button>
+    </div>
+
+    <div id="peBalancesPane">
     <div style="margin-bottom:24px;">
       <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:12px;">Wallet Name</div>
       <input id="set-walletName" type="text" placeholder="Ascend2k" maxlength="32" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;margin-bottom:8px;">
@@ -770,6 +776,7 @@
 
 <script src="/js/trust.js?v=12"></script>
 <script src="/js/gate.js?v=2"></script>
+<script src="/js/notify.js?v=1"></script>
 <script>
   // Wire the admin key icon — visible only when current session is admin
   document.addEventListener('DOMContentLoaded', function () {
