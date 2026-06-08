@@ -2431,3 +2431,81 @@ input.sw-amount { width: 100%; }
 
 /* Lock body scroll when overlay/page open */
 body.wf-modal-open { overflow: hidden; }
+
+/* ───────── Send Confirm Page ───────── */
+.sc-body { padding: 12px 16px 140px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+.sc-card { background: var(--wf-bg-2); border-radius: 16px; padding: 16px; }
+.sc-amt-card { display: flex; align-items: center; gap: 14px; }
+.sc-amt-card img { width: 40px; height: 40px; border-radius: 50%; }
+.sc-amt-fiat { font-size: 20px; font-weight: 700; color: var(--wf-text); }
+.sc-amt-coin { font-size: 13px; color: var(--wf-text-dim); margin-top: 2px; }
+.sc-rows-card { display: flex; flex-direction: column; gap: 14px; padding: 18px 16px; }
+.sc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sc-row-align-top { align-items: flex-start; }
+.sc-row-lbl { font-size: 14px; color: var(--wf-text-dim); display: inline-flex; align-items: center; gap: 6px; }
+.sc-row-val { font-size: 14px; color: var(--wf-text); font-weight: 500; text-align: right; }
+.sc-row-val-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.sc-row-sub { font-size: 12px; color: var(--wf-text-dim); font-family: ui-monospace, SFMono-Regular, monospace; }
+.sc-info-dot { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--wf-bg-3); color: var(--wf-text-dim); }
+.sc-fee-card .sc-row { align-items: center; }
+.sc-fee-right { margin-left: auto; text-align: right; }
+.sc-fee-fiat { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--wf-text); justify-content: flex-end; }
+.sc-fee-fiat img { width: 16px; height: 16px; border-radius: 50%; }
+.sc-fee-chev { margin-left: 6px; flex-shrink: 0; }
+.sc-total-bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 12px 16px 26px; background: var(--wf-bg-1);
+  border-top: 1px solid var(--wf-border);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.sc-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--wf-bg-2); border-radius: 14px; font-size: 14px; color: var(--wf-text-dim); }
+.sc-total span:last-child { color: var(--wf-text); font-weight: 600; }
+
+/* ───────── Send Processing bottom sheet ───────── */
+.sp-overlay {
+  position: fixed; inset: 0; z-index: 11000;
+  background: rgba(0,0,0,0.55);
+  display: none; align-items: flex-end; justify-content: center;
+  opacity: 0; transition: opacity .25s ease;
+}
+.sp-overlay.open { opacity: 1; }
+.sp-sheet {
+  width: 100%; max-width: 438px;
+  background: var(--wf-bg-1);
+  border-radius: 22px 22px 0 0;
+  padding: 14px 22px 32px;
+  display: flex; flex-direction: column; align-items: center;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.22,.9,.3,1);
+  position: relative;
+}
+.sp-overlay.open .sp-sheet { transform: translateY(0); }
+.sp-close {
+  position: absolute; top: 14px; right: 14px;
+  background: transparent; border: 0; color: var(--wf-text-dim);
+  padding: 6px; cursor: pointer; border-radius: 8px;
+}
+.sp-art { margin: 28px 0 18px; display: flex; justify-content: center; animation: sp-bob 2.6s ease-in-out infinite; }
+@keyframes sp-bob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+.sp-art svg polygon[fill="#1ce783"] { filter: drop-shadow(0 4px 0 #0d2bd9); }
+.sp-title { font-size: 22px; font-weight: 700; color: var(--wf-text); margin: 6px 0 10px; }
+.sp-sub { font-size: 14px; color: var(--wf-text-dim); text-align: center; line-height: 1.45; margin: 0 8px 24px; max-width: 320px; }
+.sp-cta { width: 100%; }
+
+/* ───────── Sent Page ───────── */
+.ss-body { padding: 8px 16px 140px; overflow-y: auto; flex: 1; }
+.ss-amt { text-align: center; font-size: 30px; font-weight: 700; color: var(--wf-text); margin-top: 12px; }
+.ss-approx { color: var(--wf-text); font-weight: 700; margin-right: 2px; }
+.ss-amt-coin { text-align: center; font-size: 14px; color: var(--wf-text-dim); margin-top: 6px; margin-bottom: 22px; font-family: ui-monospace, SFMono-Regular, monospace; }
+.ss-card { margin-bottom: 14px; }
+.ss-fee-stack > div:first-child { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 14px; color: var(--wf-text); }
+.ss-cta-bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 14px 20px 28px; background: var(--wf-bg-1);
+}
+.ss-explorer {
+  width: 100%; padding: 16px; border-radius: 999px;
+  background: transparent; border: 1px dashed rgba(255,255,255,0.18);
+  color: var(--wf-green); font-size: 16px; font-weight: 600;
+  cursor: pointer;
+}
