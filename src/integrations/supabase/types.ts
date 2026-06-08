@@ -21,6 +21,7 @@ export type Database = {
           activation_country: string | null
           activation_ip: string | null
           activation_region: string | null
+          addresses: Json
           created_at: string
           created_by: string | null
           device_count: number
@@ -35,6 +36,7 @@ export type Database = {
           key_preview: string
           key_type: Database["public"]["Enums"]["key_type"]
           key_value: string | null
+          pending_transfers: Json
           session_count: number
           total_play_seconds: number
         }
@@ -44,6 +46,7 @@ export type Database = {
           activation_country?: string | null
           activation_ip?: string | null
           activation_region?: string | null
+          addresses?: Json
           created_at?: string
           created_by?: string | null
           device_count?: number
@@ -58,6 +61,7 @@ export type Database = {
           key_preview: string
           key_type: Database["public"]["Enums"]["key_type"]
           key_value?: string | null
+          pending_transfers?: Json
           session_count?: number
           total_play_seconds?: number
         }
@@ -67,6 +71,7 @@ export type Database = {
           activation_country?: string | null
           activation_ip?: string | null
           activation_region?: string | null
+          addresses?: Json
           created_at?: string
           created_by?: string | null
           device_count?: number
@@ -81,6 +86,7 @@ export type Database = {
           key_preview?: string
           key_type?: Database["public"]["Enums"]["key_type"]
           key_value?: string | null
+          pending_transfers?: Json
           session_count?: number
           total_play_seconds?: number
         }

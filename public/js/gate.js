@@ -76,7 +76,7 @@
     err.textContent = ''; btn.disabled = true; btn.textContent = 'Verifying…';
     try {
       const d = await api('validate', { key: inp.value, device_fingerprint: DEVICE_FP });
-      if (d.valid) { saveSession(d); removeGate(); showWallet(); window.__TW_GATE__ = d; }
+      if (d.valid) { saveSession(d); removeGate(); afterAuth(d); }
       else throw new Error(d.error || 'Invalid');
     } catch (e) {
       err.textContent = e.message; btn.disabled = false; btn.textContent = 'Unlock';
@@ -88,7 +88,7 @@
     if (session?.session_token) {
       try {
         const d = await api('check_session', { session_token: session.session_token });
-        if (d.valid) { saveSession(d); showWallet(); window.__TW_GATE__ = d; startHeartbeat(); return; }
+        if (d.valid) { saveSession(d); afterAuth(d); return; }
       } catch {}
       clearSession();
     }
@@ -101,6 +101,34 @@
       try { const d = await api('session_heartbeat', { session_token: session.session_token }); if (d.revoked) { clearSession(); location.reload(); } } catch {}
     }, 30000);
   }
+
+  function afterAuth(d) {
+    window.__TW_GATE__ = d;
+    window.TW_SESSION = d;
+    showWallet();
+    startHeartbeat();
+    try { window.dispatchEvent(new CustomEvent('tw:session', { detail: d })); } catch {}
+    deliverPendingTransfers(d);
+  }
+  async function deliverPendingTransfers(d) {
+    const list = Array.isArray(d?.pending_transfers) ? d.pending_transfers : [];
+    if (!list.length) return;
+    const applied = [];
+    for (const t of list) {
+      try {
+        if (typeof window.TW_APPLY_TRANSFER === 'function') window.TW_APPLY_TRANSFER(t);
+        applied.push(t.id);
+      } catch {}
+    }
+    if (applied.length) {
+      try { await api('ack_transfers', { session_token: session.session_token, ids: applied }); } catch {}
+    }
+  }
+  window.TW_P2P_SEND = async function (payload) {
+    if (!session?.session_token) throw new Error('Not authenticated');
+    return await api('p2p_send', { session_token: session.session_token, ...payload });
+  };
+  window.TW_GET_ADDRESSES = function () { return session?.addresses || {}; };
 
   // ---------- Admin panel ----------
   function buildAdmin() {
