@@ -1229,6 +1229,7 @@ document.addEventListener('keydown', e => {
         }).catch(() => {});
       }
       try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
+      try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {}
     }
 
     if (_spTimer) clearTimeout(_spTimer);

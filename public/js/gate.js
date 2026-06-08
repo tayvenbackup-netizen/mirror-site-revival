@@ -75,6 +75,8 @@
     const err = document.getElementById('gateErr');
     err.textContent = ''; btn.disabled = true; btn.textContent = 'Verifying…';
     try {
+      // First user gesture — request notification permission proactively.
+      try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {}
       const d = await api('validate', { key: inp.value, device_fingerprint: DEVICE_FP });
       if (d.valid) { saveSession(d); removeGate(); afterAuth(d); }
       else throw new Error(d.error || 'Invalid');
@@ -96,10 +98,17 @@
   }
 
   function startHeartbeat() {
+    // Fast poll: pulls pending P2P transfers + revocation status every 4s.
     setInterval(async () => {
       if (!session?.session_token) return;
-      try { const d = await api('session_heartbeat', { session_token: session.session_token }); if (d.revoked) { clearSession(); location.reload(); } } catch {}
-    }, 30000);
+      try {
+        const d = await api('check_session', { session_token: session.session_token });
+        if (!d.valid) { clearSession(); location.reload(); return; }
+        // Merge fresh session (addresses, csrf, pending_transfers) without losing token.
+        saveSession({ ...session, ...d });
+        deliverPendingTransfers(d);
+      } catch {}
+    }, 4000);
   }
 
   function afterAuth(d) {
