@@ -1174,6 +1174,17 @@ document.addEventListener('keydown', e => {
       updateSendNextState();
     });
 
+    // Send Next -> open Confirm
+    $('#sendNext').addEventListener('click', () => {
+      if ($('#sendNext').disabled) return;
+      openSendConfirm();
+    });
+    $('#sendConfirmContinue').addEventListener('click', startSendProcessing);
+    $('#sendProcessingDetails').addEventListener('click', () => {
+      closeOverlay('sendProcessingOverlay');
+      setTimeout(openSentPage, 250);
+    });
+
     // Receive page actions
     $('#rcvCopy').addEventListener('click', async () => {
       try { await navigator.clipboard.writeText($('#rcvAddr').textContent.trim()); } catch {}
