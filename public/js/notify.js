@@ -22,30 +22,44 @@
   let autoTimer = null;
   let autoStart = null;
   let initialized = false;
+  let swRegisterPromise = null;
 
   function persistEditorState(patch) {
     editorState = { ...editorState, ...(patch || {}) };
     try { localStorage.setItem(EDITOR_STATE_KEY, JSON.stringify(editorState)); } catch {}
   }
 
+  async function ensureNotificationWorker() {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+      const existing = await navigator.serviceWorker.getRegistration('/');
+      if (existing) return existing;
+    } catch {}
+    if (!swRegisterPromise) {
+      swRegisterPromise = navigator.serviceWorker.register('/tw-sw.js', { scope: '/' }).catch(() => null);
+    }
+    try {
+      return await swRegisterPromise;
+    } catch {
+      return null;
+    }
+  }
+
   async function fire(title, body) {
+    showToast(title, body);
     let nativeShown = false;
     try {
       if (SUPPORTED) {
-        if (Notification.permission === 'default') {
-          try { await Notification.requestPermission(); } catch {}
-        }
         if (Notification.permission === 'granted') {
           const payload = { body, icon: '/assets/trust-192.png', badge: '/assets/trust-192.png', tag: 'tw-' + Date.now(), renotify: true };
           try {
-            const reg = await (navigator.serviceWorker && navigator.serviceWorker.ready);
+            const reg = await ensureNotificationWorker();
             if (reg && reg.showNotification) { await reg.showNotification(title, payload); nativeShown = true; }
           } catch {}
           if (!nativeShown) { try { new Notification(title, payload); nativeShown = true; } catch {} }
         }
       }
     } catch {}
-    showToast(title, body);
   }
 
   function ensureToastStyles() {
@@ -285,6 +299,7 @@
     if (initialized) return true;
     if (!$('notifPushBtn') || !$('settingsOverlay')) return false;
     initialized = true;
+    try { ensureNotificationWorker(); } catch {}
     document.addEventListener('click', handleClick);
     window.addEventListener('focus', refreshPushUI);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshPushUI(); });
