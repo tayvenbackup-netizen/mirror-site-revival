@@ -151,7 +151,7 @@
     const liveFiat = live > 0 ? (Number(tx.amount) || 0) * live : (Number(tx.fiat) || 0);
     const liveFeeFiat = (live > 0 && tx.fee > 0) ? tx.fee * live : (Number(tx.feeFiat) || 0);
     $('tdTitle').textContent = isSent ? 'Sent' : 'Received';
-    $('tdAmtFiat').textContent = '$' + Math.abs(liveFiat).toFixed(liveFiat && Math.abs(liveFiat) < 0.01 ? 4 : 2);
+    $('tdAmtFiat').textContent = fmtFiatDetail(liveFiat);
     $('tdAmtCoin').textContent = `${isSent ? '-' : '+'}${fmtAmt(tx.amount)} ${tx.symU}`;
     $('tdDate').textContent = fmtFullDate(new Date(tx.dateISO));
     const st = $('tdStatus');
@@ -163,7 +163,7 @@
     if (tx.fee > 0){
       feeCard.style.display = '';
       $('tdFeeCoin').textContent = `${tx.fee} ${tx.symU}`;
-      $('tdFeeFiat').textContent = '≈ $' + liveFeeFiat.toFixed(liveFeeFiat < 0.01 ? 4 : 2);
+      $('tdFeeFiat').textContent = fmtFiatDetail(liveFeeFiat);
     } else {
       feeCard.style.display = 'none';
     }
