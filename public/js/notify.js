@@ -46,7 +46,6 @@
   }
 
   async function fire(title, body) {
-    showToast(title, body);
     let nativeShown = false;
     try {
       if (SUPPORTED) {
