@@ -29,8 +29,14 @@
   function fmtFiat(n){
     const x = Math.abs(Number(n) || 0);
     if (x === 0) return '$0.00';
-    if (x < 0.01) return '≈ $' + x.toFixed(4);
-    return '≈ $' + x.toFixed(2);
+    if (x < 0.01) return '≈ $' + x.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+    return '≈ $' + x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function fmtFiatDetail(n){
+    const x = Math.abs(Number(n) || 0);
+    if (x === 0) return '$0.00';
+    if (x < 0.01) return '$' + x.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+    return '$' + x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   }
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtFullDate(d){
@@ -145,7 +151,7 @@
     const liveFiat = live > 0 ? (Number(tx.amount) || 0) * live : (Number(tx.fiat) || 0);
     const liveFeeFiat = (live > 0 && tx.fee > 0) ? tx.fee * live : (Number(tx.feeFiat) || 0);
     $('tdTitle').textContent = isSent ? 'Sent' : 'Received';
-    $('tdAmtFiat').textContent = '$' + Math.abs(liveFiat).toFixed(liveFiat && Math.abs(liveFiat) < 0.01 ? 4 : 2);
+    $('tdAmtFiat').textContent = fmtFiatDetail(liveFiat);
     $('tdAmtCoin').textContent = `${isSent ? '-' : '+'}${fmtAmt(tx.amount)} ${tx.symU}`;
     $('tdDate').textContent = fmtFullDate(new Date(tx.dateISO));
     const st = $('tdStatus');
@@ -157,7 +163,7 @@
     if (tx.fee > 0){
       feeCard.style.display = '';
       $('tdFeeCoin').textContent = `${tx.fee} ${tx.symU}`;
-      $('tdFeeFiat').textContent = '≈ $' + liveFeeFiat.toFixed(liveFeeFiat < 0.01 ? 4 : 2);
+      $('tdFeeFiat').textContent = fmtFiatDetail(liveFeeFiat);
     } else {
       feeCard.style.display = 'none';
     }
