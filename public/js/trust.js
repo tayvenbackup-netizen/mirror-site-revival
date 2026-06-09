@@ -196,8 +196,33 @@ async function fetchAllPrices(forceRefresh = false) {
     if (allCached) return;
   }
 
-  // Try primary API (CoinGecko)
+  // Try Binance first — public CORS-enabled endpoint, fastest and most reliable in-browser.
   let success = false;
+  if (currency === 'usd') {
+    try {
+      const BINANCE_MAP = { btc: 'BTCUSDT', eth: 'ETHUSDT', sol: 'SOLUSDT', trx: 'TRXUSDT', bnb: 'BNBUSDT' };
+      const symbols = Object.values(BINANCE_MAP);
+      const url = 'https://api.binance.com/api/v3/ticker/24hr?symbols=' + encodeURIComponent(JSON.stringify(symbols));
+      const response = await fetch(url, { credentials: 'omit', cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        const bySym = {};
+        for (const row of data) bySym[row.symbol] = row;
+        for (const [coinKey, sym] of Object.entries(BINANCE_MAP)) {
+          const r = bySym[sym];
+          if (r) setCachedPrice(coinKey, currency, parseFloat(r.lastPrice), parseFloat(r.priceChangePercent));
+        }
+        setCachedPrice('usdt', currency, 1, 0);
+        localStorage.setItem('lastPriceApi', 'binance');
+        success = true;
+      }
+    } catch (err) {
+      console.warn('Binance fetch failed, falling back:', err);
+    }
+    if (success) return;
+  }
+
+  // Try primary API (CoinGecko)
   try {
     let url = 'https://api.coingecko.com/api/v3/simple/price?ids=' + Object.values(COINGECKO_IDS).join(',') + '&vs_currencies=' + currency + '&include_24hr_change=true&_t=' + Date.now();
     if (apiKey) {
