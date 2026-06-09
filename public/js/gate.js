@@ -40,6 +40,52 @@
   function hideWallet() { const r = document.getElementById('root'); if (r) r.style.visibility = 'hidden'; }
   function showWallet() { const r = document.getElementById('root'); if (r) r.style.visibility = 'visible'; }
 
+  // ---------- Server-side bundle loader ----------
+  let __bundleLoaded = false;
+  async function loadAppBundle() {
+    if (__bundleLoaded) return true;
+    if (!session?.session_token) return false;
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/get-app-bundle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON,
+          'Authorization': 'Bearer ' + SUPABASE_ANON,
+          'x-session-token': session.session_token,
+        },
+        body: JSON.stringify({ session_token: session.session_token }),
+      });
+      if (!r.ok) throw new Error('bundle http ' + r.status);
+      const b = await r.json();
+      if (!b || !b.html || !b.css || !b.js) throw new Error('bundle invalid');
+      // Inject CSS
+      if (!document.getElementById('twAppCss')) {
+        const st = document.createElement('style');
+        st.id = 'twAppCss';
+        st.textContent = b.css;
+        document.head.appendChild(st);
+      }
+      // Inject HTML into #root
+      const root = document.getElementById('root');
+      if (root) root.innerHTML = b.html;
+      // Execute JS bundle in global scope
+      try { (0, eval)(b.js); } catch (e) { console.error('bundle exec', e); }
+      __bundleLoaded = true;
+      return true;
+    } catch (e) {
+      console.error('bundle load failed', e);
+      return false;
+    }
+  }
+  function unloadAppBundle() {
+    __bundleLoaded = false;
+    const root = document.getElementById('root');
+    if (root) root.innerHTML = '';
+    const st = document.getElementById('twAppCss');
+    if (st) st.remove();
+  }
+
   // ---------- Gate UI ----------
   function buildGate() {
     if (document.getElementById('gateRoot')) return;
@@ -148,8 +194,17 @@
     }, 4000);
   }
 
-  function afterAuth(d) {
+  async function afterAuth(d) {
     window.__TW_GATE__ = d; window.TW_SESSION = d;
+    const ok = await loadAppBundle();
+    if (!ok) {
+      // Bundle failed → force re-auth
+      clearSession();
+      buildGate();
+      const err = document.getElementById('gateErr');
+      if (err) err.textContent = 'Failed to load app. Please retry.';
+      return;
+    }
     showWallet(); startHeartbeat();
     try { window.dispatchEvent(new CustomEvent('tw:session', { detail: d })); } catch {}
     deliverPendingTransfers(d);
