@@ -1840,6 +1840,51 @@ body {
 	border-radius: 3px
 }
 
+#settingsOverlay {
+	padding-top: env(safe-area-inset-top, 0);
+	padding-right: env(safe-area-inset-right, 0);
+	padding-bottom: env(safe-area-inset-bottom, 0);
+	padding-left: env(safe-area-inset-left, 0)
+}
+
+#settingsPanel {
+	overscroll-behavior: contain
+}
+
+.pe-tab,
+.notif-tab {
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+	white-space: normal;
+	text-align: center;
+	line-height: 1.2;
+	transition: background-color .16s ease, color .16s ease
+}
+
+.pe-tab.active,
+.notif-tab.active {
+	background: #2a2a2a !important;
+	color: #fff !important
+}
+
+.pe-tab:not(.active),
+.notif-tab:not(.active) {
+	background: transparent !important;
+	color: #888 !important
+}
+
+#peNotifPane,
+#peBalancesPane {
+	min-width: 0
+}
+
+#peNotifPane select,
+#peNotifPane input,
+#peBalancesPane select,
+#peBalancesPane input {
+	max-width: 100%
+}
+
 .tw-scrollbar {
 	scrollbar-width: none
 }
