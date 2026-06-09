@@ -71,10 +71,11 @@
   }
 
   function setMode(mode){
-    $('notifAutoBox').style.display = mode==='auto'?'block':'none';
-    $('notifAutoToggle').style.display = mode==='auto'?'block':'none';
-    $('notifFireBtn').style.display = mode==='manual'?'block':'none';
-    if(mode==='manual' && autoTimer){ clearInterval(autoTimer); autoTimer=null; $('notifAutoToggle').textContent='Start Auto Schedule'; }
+    const ab=$('notifAutoBox'), at=$('notifAutoToggle'), fb=$('notifFireBtn');
+    if(ab) ab.style.display = mode==='auto'?'block':'none';
+    if(at) at.style.display = mode==='auto'?'block':'none';
+    if(fb) fb.style.display = mode==='manual'?'block':'none';
+    if(mode==='manual' && autoTimer){ clearInterval(autoTimer); autoTimer=null; if(at) at.textContent='Start Auto Schedule'; }
   }
 
   function init(){
@@ -95,8 +96,10 @@
       document.querySelectorAll('.notif-mode-tab').forEach(x=>x.classList.remove('active'));
       b.classList.add('active'); setMode(b.dataset.nmode);
     }));
-    $('notifFireBtn').addEventListener('click', fireFromUI);
-    $('notifAutoToggle').addEventListener('click', ()=>{
+    const fireBtn=$('notifFireBtn');
+    if(fireBtn) fireBtn.addEventListener('click', fireFromUI);
+    const autoBtn=$('notifAutoToggle');
+    if(autoBtn) autoBtn.addEventListener('click', ()=>{
       if(autoTimer){ clearInterval(autoTimer); autoTimer=null; clearTimeout(autoStart); autoStart=null; $('notifAutoToggle').textContent='Start Auto Schedule'; return; }
       const n=Math.max(1, parseInt($('notif-every').value)||1);
       const unit=parseInt($('notif-unit').value)||60000;
