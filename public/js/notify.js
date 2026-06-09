@@ -69,6 +69,11 @@
       ensureToastStyles();
       let wrap = document.getElementById('twToastWrap');
       if (!wrap) { wrap = document.createElement('div'); wrap.id = 'twToastWrap'; document.body.appendChild(wrap); }
+      // Always re-attach to end of <body> so the wrap stays above any overlay
+      // that was opened after toast styles were first injected.
+      if (wrap.parentNode !== document.body || wrap.nextSibling) {
+        document.body.appendChild(wrap);
+      }
       const el = document.createElement('div');
       el.className = 'tw-toast';
       const ic = (title || '').slice(0, 2);
