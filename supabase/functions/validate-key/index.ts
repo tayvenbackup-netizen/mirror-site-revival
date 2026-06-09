@@ -393,10 +393,11 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: 'Bad JSON' }, 400); }
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+  const ua = req.headers.get('user-agent') || '';
   const action = String(body.action || '');
 
   try {
-    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip);
+    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua);
     if (action === 'check_session') return await handleCheckSession(body.session_token);
     if (action === 'session_heartbeat') return await handleHeartbeat(body.session_token);
     if (action === 'logout') return await handleLogout(body.session_token);
