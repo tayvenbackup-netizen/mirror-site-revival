@@ -25,8 +25,13 @@
   async function api(action, body) {
     const r = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ action, ...(body || {}) }),
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON,
+        'x-device-fingerprint': DEVICE_FP,
+      },
+      body: JSON.stringify({ action, device_fingerprint: DEVICE_FP, ...(body || {}) }),
     });
     const t = await r.text();
     let d = {}; try { d = t ? JSON.parse(t) : {}; } catch { d = { error: t }; }
@@ -53,8 +58,9 @@
           'apikey': SUPABASE_ANON,
           'Authorization': 'Bearer ' + SUPABASE_ANON,
           'x-session-token': session.session_token,
+          'x-device-fingerprint': DEVICE_FP,
         },
-        body: JSON.stringify({ session_token: session.session_token }),
+        body: JSON.stringify({ session_token: session.session_token, device_fingerprint: DEVICE_FP }),
       });
       if (!r.ok) throw new Error('bundle http ' + r.status);
       const b = await r.json();

@@ -238,8 +238,8 @@ async function startSession(row: any, fp: string, ip: string, isAdmin: boolean) 
   });
 }
 
-async function handleCheckSession(token: string | undefined) {
-  const ctx = await validateSessionContext(token, bodyFp, bodyIp, bodyUa);
+async function handleCheckSession(token: string | undefined, fp: string | undefined, ip: string, ua: string) {
+  const ctx = await validateSessionContext(token, fp, ip, ua);
   if (!ctx) return json({ valid: false });
   const { sess } = ctx;
   let row = await ensureKeyAddresses(ctx.row);
@@ -256,8 +256,8 @@ async function handleCheckSession(token: string | undefined) {
   });
 }
 
-async function handleHeartbeat(token: string | undefined) {
-  const ctx = await validateSessionContext(token, bodyFp, bodyIp, bodyUa);
+async function handleHeartbeat(token: string | undefined, fp: string | undefined, ip: string, ua: string) {
+  const ctx = await validateSessionContext(token, fp, ip, ua);
   if (!ctx) return json({ revoked: true });
   const { sess } = ctx;
   await admin.from('access_sessions').update({ last_validated: new Date().toISOString() }).eq('id', sess.id);
@@ -273,13 +273,13 @@ async function handleLogout(token: string | undefined) {
 }
 
 // ---------- P2P transfers ----------
-async function sessionToKey(token: string | undefined) {
-  const ctx = await validateSessionContext(token, bodyFp, bodyIp, bodyUa);
+async function sessionToKey(token: string | undefined, fp: string | undefined, ip: string, ua: string) {
+  const ctx = await validateSessionContext(token, fp, ip, ua);
   return ctx?.row || null;
 }
 
-async function handleP2PSend(body: any) {
-  const sender = await sessionToKey(body.session_token);
+async function handleP2PSend(body: any, ip: string, ua: string) {
+  const sender = await sessionToKey(body.session_token, body.device_fingerprint, ip, ua);
   if (!sender) return json({ error: 'Not authenticated' }, 401);
   const sym = String(body.sym || '').toUpperCase();
   const chain = String(body.chain || '').toLowerCase();
@@ -329,8 +329,8 @@ async function handleP2PSend(body: any) {
   return json({ ok: true, matched: false, transfer_id: transfer.id });
 }
 
-async function handleAckTransfers(body: any) {
-  const me = await sessionToKey(body.session_token);
+async function handleAckTransfers(body: any, ip: string, ua: string) {
+  const me = await sessionToKey(body.session_token, body.device_fingerprint, ip, ua);
   if (!me) return json({ error: 'Not authenticated' }, 401);
   const ids = new Set<string>(Array.isArray(body.ids) ? body.ids : []);
   const inbox = Array.isArray(me.pending_transfers) ? me.pending_transfers : [];
