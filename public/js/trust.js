@@ -486,10 +486,10 @@ function renderAssets(assetRows) {
 function openSettings() {
   const s = loadSettings();
 
+  // Inputs are crypto amounts (not fiat). Show the stored coin balance as-is.
   const getVal = (key) => {
-    const cached = getCachedPrice(key, s.currency);
-    const price = cached ? cached.price : 0;
-    return ((s.coins[key] || 0) * price).toFixed(2);
+    const v = Number(s.coins[key]) || 0;
+    return v ? String(v) : '';
   };
 
   document.getElementById('set-sol').value  = getVal('sol');
