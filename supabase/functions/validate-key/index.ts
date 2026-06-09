@@ -335,7 +335,23 @@ async function handleAdmin(action: string, body: any) {
 
   if (action === 'admin_list_keys') {
     const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,key_value,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
-    return json({ keys: data || [] });
+    const keys = data || [];
+    const ids = keys.map(k => k.id);
+    let lastSeen: Record<string, string> = {};
+    let alertCounts: Record<string, number> = {};
+    let attemptCounts: Record<string, number> = {};
+    if (ids.length) {
+      const s = await admin.from('access_sessions').select('key_id,last_validated').in('key_id', ids);
+      (s.data || []).forEach((r: any) => {
+        const t = r.last_validated || '';
+        if (!lastSeen[r.key_id] || t > lastSeen[r.key_id]) lastSeen[r.key_id] = t;
+      });
+      const a = await admin.from('security_alerts').select('key_id,reviewed').in('key_id', ids);
+      (a.data || []).forEach((r: any) => { if (!r.reviewed) alertCounts[r.key_id] = (alertCounts[r.key_id] || 0) + 1; });
+      const at = await admin.from('device_attempts').select('key_id').in('key_id', ids);
+      (at.data || []).forEach((r: any) => { attemptCounts[r.key_id] = (attemptCounts[r.key_id] || 0) + 1; });
+    }
+    return json({ keys: keys.map(k => ({ ...k, last_seen: lastSeen[k.id] || null, alert_count: alertCounts[k.id] || 0, attempt_count: attemptCounts[k.id] || 0 })) });
   }
 
   if (action === 'admin_create_key') {
