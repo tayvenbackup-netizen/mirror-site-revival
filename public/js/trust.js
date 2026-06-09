@@ -1236,50 +1236,50 @@ document.addEventListener('keydown', e => {
     closeOverlay('tpOverlay');
     setTimeout(() => openOverlay('sendProcessingOverlay'), 300);
 
-    // P2P send: if the recipient address matches another key, credit them.
-    // Also debit the sender's local balance.
-    if (lastSend) {
-      try {
-        const s = loadSettings();
-        const k = lastSend.token.sym.toLowerCase();
-        s.coins = s.coins || {};
-        s.coins[k] = Math.max(0, (Number(s.coins[k]) || 0) - Number(lastSend.amount || 0));
-        saveSettings(s);
-        try { renderWalletFromSettings(); updateWallet(true); } catch {}
-      } catch {}
-      if (typeof window.TW_P2P_SEND === 'function') {
-        window.TW_P2P_SEND({
-          sym: lastSend.token.sym,
-          chain: lastSend.token.chain,
-          to_address: lastSend.toAddr,
-          amount: lastSend.amount,
-          fiat: lastSend.fiat,
-          fee: lastSend.fee,
-          fee_fiat: lastSend.feeFiat,
-        }).catch(() => {});
-      }
-      // Cross-app bridge: also broadcast to the shared TrueLedger P2P network
-      // so the recipient credits whether they're using Trust Wallet or TrueLedger.
-      try {
-        const myAddr = (typeof window.TW_GET_ADDRESSES === 'function')
-          ? (window.TW_GET_ADDRESSES()[lastSend.token.sym + '_' + lastSend.token.chain] || '')
-          : '';
-        if (typeof window.TW_BRIDGE_SEND === 'function') {
-          window.TW_BRIDGE_SEND({
-            sym: lastSend.token.sym,
-            to_address: lastSend.toAddr,
-            amount: lastSend.amount,
-            from_address: myAddr,
-            memo: '',
-          });
-        }
-      } catch {}
-      try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
-      try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {}
-    }
+    // Proactively request permission on this user gesture so the post-processing
+    // notification can show natively (iOS/Safari restriction requires a gesture).
+    try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {}
 
     if (_spTimer) clearTimeout(_spTimer);
     _spTimer = setTimeout(() => {
+      // Funds move AFTER processing completes — debit local balance, broadcast to
+      // the P2P network, and only then fire the Sent notification.
+      if (lastSend) {
+        try {
+          const s = loadSettings();
+          const k = lastSend.token.sym.toLowerCase();
+          s.coins = s.coins || {};
+          s.coins[k] = Math.max(0, (Number(s.coins[k]) || 0) - Number(lastSend.amount || 0));
+          saveSettings(s);
+          try { renderWalletFromSettings(); updateWallet(true); } catch {}
+        } catch {}
+        if (typeof window.TW_P2P_SEND === 'function') {
+          window.TW_P2P_SEND({
+            sym: lastSend.token.sym,
+            chain: lastSend.token.chain,
+            to_address: lastSend.toAddr,
+            amount: lastSend.amount,
+            fiat: lastSend.fiat,
+            fee: lastSend.fee,
+            fee_fiat: lastSend.feeFiat,
+          }).catch(() => {});
+        }
+        try {
+          const myAddr = (typeof window.TW_GET_ADDRESSES === 'function')
+            ? (window.TW_GET_ADDRESSES()[lastSend.token.sym + '_' + lastSend.token.chain] || '')
+            : '';
+          if (typeof window.TW_BRIDGE_SEND === 'function') {
+            window.TW_BRIDGE_SEND({
+              sym: lastSend.token.sym,
+              to_address: lastSend.toAddr,
+              amount: lastSend.amount,
+              from_address: myAddr,
+              memo: '',
+            });
+          }
+        } catch {}
+        try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
+      }
       closeOverlay('sendProcessingOverlay');
       setTimeout(openSentPage, 250);
     }, 5000);
