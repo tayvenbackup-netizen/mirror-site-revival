@@ -172,6 +172,26 @@ function setCachedPrice(coinKey, currency, price, change24h) {
   );
 }
 
+/**
+ * Get the live price for a coin symbol in the user's active currency.
+ * Falls back to 0 when no price is cached. Stablecoins always return 1.
+ */
+function priceFor(sym) {
+  const k = String(sym || '').toLowerCase();
+  if (!k) return 0;
+  if (k === 'usdt' || k === 'usdc' || k === 'dai' || k === 'busd') return 1;
+  try {
+    const settings = JSON.parse(localStorage.getItem('twallet_settings') || '{}');
+    const cur = settings.currency || 'usd';
+    const c = getCachedPrice(k, cur);
+    if (c && c.price > 0) return c.price;
+    // Fall back to USD-cached price (rare currency switch race)
+    const cu = getCachedPrice(k, 'usd');
+    return cu && cu.price > 0 ? cu.price : 0;
+  } catch { return 0; }
+}
+window.TW_PRICE = priceFor;
+
 // ── Price fetching ────────────────────────────────────────────────────────────
 
 /**
