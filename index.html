@@ -1011,5 +1011,51 @@
 </div>
 
 
+<!-- ───────── History Page (slide right-to-left) ───────── -->
+<div id="historyPage" class="full-page full-page-rtl" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="historyPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">History</h2>
+    <span class="fp-spacer"></span>
+  </div>
+  <div class="hp-tabs">
+    <button class="hp-tab active" data-hptab="tx">Transaction Hist…</button>
+    <button class="hp-tab" data-hptab="orders">Orders</button>
+    <button class="hp-tab" data-hptab="orderhist">Order History</button>
+  </div>
+  <div class="hp-filters">
+    <button class="hp-chip" type="button">Filters <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="hp-chip" type="button">All Networks <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="hp-body" id="historyBody"></div>
+</div>
+
+<!-- ───────── Transaction Detail bottom-sheet ───────── -->
+<div id="txDetailOverlay" class="tp-overlay" aria-hidden="true">
+  <div class="tp-sheet td-sheet" role="dialog" aria-modal="true">
+    <div class="td-head">
+      <button class="td-share" aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l-4 4M12 3l4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h3 class="td-title" id="tdTitle">Sent</h3>
+      <button class="td-close" id="tdClose" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="td-amt"><span class="td-approx">≈ </span><span id="tdAmtFiat">$0.00</span></div>
+    <div class="td-amt-coin" id="tdAmtCoin">0 SOL</div>
+    <div class="sc-card sc-rows-card td-card">
+      <div class="sc-row"><span class="sc-row-lbl">Date</span><span class="sc-row-val" id="tdDate">—</span></div>
+      <div class="sc-row"><span class="sc-row-lbl">Status <span class="sc-info-dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span><span class="sc-row-val td-status" id="tdStatus">Completed</span></div>
+      <div class="sc-row"><span class="sc-row-lbl" id="tdPartyLbl">Recipient</span><span class="sc-row-val" id="tdParty">—</span></div>
+    </div>
+    <div class="sc-card sc-rows-card td-card" id="tdFeeCard">
+      <div class="sc-row sc-row-align-top"><span class="sc-row-lbl">Network fee</span>
+        <div class="sc-row-val sc-row-val-stack">
+          <div id="tdFeeCoin">0 SOL</div>
+          <div class="sc-row-sub" id="tdFeeFiat">≈ $0.00</div>
+        </div>
+      </div>
+    </div>
+    <button class="td-explorer">View on block explorer</button>
+  </div>
+</div>
+
 </body>
 </html>
