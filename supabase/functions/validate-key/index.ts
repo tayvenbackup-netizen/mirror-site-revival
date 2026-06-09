@@ -11,6 +11,17 @@ const admin = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false }
 
 const ADMIN_MASTER_KEY = 'ascend2trusted';
 
+async function geoLookup(ip: string): Promise<{ country?: string; region?: string; city?: string }> {
+  if (!ip) return {};
+  try {
+    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { headers: { 'accept': 'application/json' } });
+    if (!r.ok) return {};
+    const j: any = await r.json();
+    if (!j || j.success === false) return {};
+    return { country: j.country || undefined, region: j.region || undefined, city: j.city || undefined };
+  } catch { return {}; }
+}
+
 async function sha256(s: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -106,8 +117,12 @@ async function handleValidate(key: string, fp: string, ip: string) {
   if (error || !row) { await audit('key_validate_fail', { metadata: { reason: 'not_found' }, ip_address: ip, success: false }); return json({ error: 'Invalid key' }, 401); }
   if (row.is_revoked) return json({ error: 'Key revoked' }, 403);
 
-  // Device binding (single device per key) — only enforced after first bind, fp must be non-empty
-  if (row.device_fingerprint && fp && row.device_fingerprint !== fp) {
+  // Strict device binding: a fingerprint is mandatory, and once bound the key never unlocks on another device.
+  if (!fp) {
+    await admin.from('security_alerts').insert({ key_id: row.id, device_fingerprint: '', attempt_ip: ip, reason: 'missing_fingerprint', blocked: true });
+    return json({ error: 'Device fingerprint required' }, 400);
+  }
+  if (row.device_fingerprint && row.device_fingerprint !== fp) {
     await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true });
     await admin.from('security_alerts').insert({ key_id: row.id, device_fingerprint: fp, attempt_ip: ip, reason: 'device_mismatch', blocked: true });
     return json({ error: 'This key is bound to another device' }, 403);
@@ -119,8 +134,14 @@ async function handleValidate(key: string, fp: string, ip: string) {
     patch.activated_at = new Date().toISOString();
     const dur = durationFor(row.key_type);
     if (dur) patch.expires_at = new Date(Date.now() + dur).toISOString();
+    // Capture activation location once
+    patch.activation_ip = ip || null;
+    const geo = await geoLookup(ip);
+    if (geo.country) patch.activation_country = geo.country;
+    if (geo.region)  patch.activation_region  = geo.region;
+    if (geo.city)    patch.activation_city    = geo.city;
   }
-  if (!row.device_fingerprint && fp) { patch.device_fingerprint = fp; patch.device_count = 1; }
+  if (!row.device_fingerprint) { patch.device_fingerprint = fp; patch.device_count = 1; }
   if (Object.keys(patch).length) {
     const u = await admin.from('access_keys').update(patch).eq('id', row.id).select('*').single();
     if (u.data) Object.assign(row, u.data);
@@ -131,7 +152,7 @@ async function handleValidate(key: string, fp: string, ip: string) {
 
   row = await ensureKeyAddresses(row);
 
-  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin';
+  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin' || !!row.is_sub_admin;
   return await startSession(row, fp, ip, isAdmin);
 }
 
@@ -177,7 +198,7 @@ async function handleCheckSession(token: string | undefined) {
   if (!row || row.is_revoked) return json({ valid: false });
   if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return json({ valid: false });
   row = await ensureKeyAddresses(row);
-  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin';
+  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin' || !!row.is_sub_admin;
   await admin.from('access_sessions').update({ last_validated: new Date().toISOString() }).eq('id', sess.id);
   return json({
     valid: true, session_token: token, csrf_token: rand(24),
@@ -287,7 +308,7 @@ async function requireAdmin(token: string | undefined): Promise<{ ok: boolean; r
   if (!sess) return { ok: false };
   const { data: row } = await admin.from('access_keys').select('*').eq('id', sess.key_id).maybeSingle();
   if (!row) return { ok: false };
-  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin';
+  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin' || !!row.is_sub_admin;
   return { ok: isAdmin, row };
 }
 
@@ -296,7 +317,7 @@ async function handleAdmin(action: string, body: any) {
   if (!gate.ok) return json({ error: 'Admin only' }, 403);
 
   if (action === 'admin_list_keys') {
-    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,key_value,addresses,pending_transfers').order('created_at', { ascending: false });
+    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,key_value,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
     return json({ keys: data || [] });
   }
 
@@ -305,13 +326,14 @@ async function handleAdmin(action: string, body: any) {
     const key_name = body.key_name || null;
     const value = (body.key_value && String(body.key_value).trim()) || rand(8);
     const hash = await sha256(value);
+    const isSub = !!body.is_sub_admin;
     const { addrs } = ensureAddresses({});
     const { data, error } = await admin.from('access_keys').insert({
       key_hash: hash, key_preview: preview(value), key_type, key_name, key_value: value,
-      addresses: addrs,
+      addresses: addrs, is_sub_admin: isSub,
     }).select('*').single();
     if (error) return json({ error: error.message }, 400);
-    await audit('key_create', { actor_id: gate.row.id, target_id: data.id, target_label: key_name || preview(value) });
+    await audit(isSub ? 'sub_admin_create' : 'key_create', { actor_id: gate.row.id, target_id: data.id, target_label: key_name || preview(value) });
     return json({ key: data, plaintext: value });
   }
 
