@@ -462,6 +462,11 @@ function openSettings() {
   document.getElementById('set-walletName').value = s.walletName  || 'Ascend2k';
 
   document.getElementById('settingsOverlay').classList.add('open');
+  try {
+    if (window.TW_NOTIFY_EDITOR && typeof window.TW_NOTIFY_EDITOR.refresh === 'function') {
+      window.TW_NOTIFY_EDITOR.refresh();
+    }
+  } catch {}
 }
 
 /** Hide the settings overlay. */
