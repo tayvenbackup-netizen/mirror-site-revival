@@ -487,11 +487,6 @@ function openSettings() {
   document.getElementById('set-walletName').value = s.walletName  || 'Ascend2k';
 
   document.getElementById('settingsOverlay').classList.add('open');
-  try {
-    if (window.TW_NOTIFY_EDITOR && typeof window.TW_NOTIFY_EDITOR.refresh === 'function') {
-      window.TW_NOTIFY_EDITOR.refresh();
-    }
-  } catch {}
 }
 
 /** Hide the settings overlay. */
@@ -817,7 +812,6 @@ document.addEventListener('keydown', e => {
     s.coins[k] = (Number(s.coins[k]) || 0) + Number(t.amount || 0);
     saveSettings(s);
     try { renderWalletFromSettings(); updateWallet(true); } catch {}
-    try { window.TW_NOTIFY && window.TW_NOTIFY.notifyReceived(t.sym, t.amount, t.from_address || t.from || ''); } catch {}
   };
 
   // ── DOM helpers ─────────────────────────────────────
@@ -1278,7 +1272,7 @@ document.addEventListener('keydown', e => {
             });
           }
         } catch {}
-        try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
+        
       }
       closeOverlay('sendProcessingOverlay');
       setTimeout(openSentPage, 250);
