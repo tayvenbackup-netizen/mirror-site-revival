@@ -475,7 +475,6 @@
           <div><span class="ap-l">Blocked attempts</span><span class="ap-v" style="color:${k.attempt_count?'#ff8a5d':'#cfd0d2'}">${k.attempt_count || 0}</span></div>
         </div>
         <div class="ap-key-actions">
-          <button data-copy="">Copy key</button>
           <button data-act="detail">View activity</button>
           <button data-act="clear">Clear device lock</button>
           <button data-act="${k.is_revoked ? 'unrevoke' : 'revoke'}">${k.is_revoked ? 'Unrevoke' : 'Revoke'}</button>

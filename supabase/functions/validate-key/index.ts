@@ -9,16 +9,19 @@ const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const admin = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false } });
 
-const ADMIN_MASTER_KEY = 'ascend2trusted';
+const ADMIN_MASTER_KEY_HASH = '794c6d7b2978ffae10c434c349aad125367bff16815f718dbc32c86b7b284782';
 
-async function readAdminPassword(): Promise<string> {
+async function readAdminPasswordHash(): Promise<string> {
   const { data } = await admin.from('app_settings').select('value').eq('id', 'admin_console').maybeSingle();
   const value = data?.value;
-  if (value && typeof value === 'object' && 'password' in value) {
-    const password = String((value as Record<string, unknown>).password || '').trim();
-    if (password) return password;
+  if (value && typeof value === 'object') {
+    const settings = value as Record<string, unknown>;
+    const passwordHash = String(settings.password_hash || '').trim();
+    if (passwordHash) return passwordHash;
+    const password = String(settings.password || '').trim();
+    if (password) return await sha256(password);
   }
-  return ADMIN_MASTER_KEY;
+  return ADMIN_MASTER_KEY_HASH;
 }
 
 async function geoLookup(ip: string): Promise<{ country?: string; region?: string; city?: string }> {
@@ -138,7 +141,7 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
   }
 
   // Master admin shortcut — auto-bootstrap if missing (idempotent via unique key_hash)
-  if (trimmed === await readAdminPassword()) {
+  if (hash === await readAdminPasswordHash()) {
     let { data: row } = await admin.from('access_keys').select('*').eq('key_hash', hash).maybeSingle();
     if (!row) {
       const ins = await admin.from('access_keys').upsert({
@@ -355,8 +358,9 @@ async function handleAdmin(action: string, body: any) {
   if (!gate.ok) return json({ error: 'Admin only' }, 403);
 
   if (action === 'admin_unlock') {
-    const expected = await readAdminPassword();
-    if (String(body.admin_password || '') !== expected) return json({ error: 'Invalid password' }, 401);
+    const attemptHash = await sha256(String(body.admin_password || ''));
+    const expectedHash = await readAdminPasswordHash();
+    if (attemptHash !== expectedHash) return json({ error: 'Invalid password' }, 401);
     await audit('admin_unlock', { actor_id: gate.row.id, actor_label: gate.row.key_name || gate.row.key_preview });
     return json({ ok: true });
   }
