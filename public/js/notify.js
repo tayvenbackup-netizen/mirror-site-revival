@@ -7,18 +7,54 @@
   function fmtAmt(n){ const x=Number(n)||0; if(x>=1000)return x.toLocaleString('en-US',{maximumFractionDigits:2}); if(x>=1)return x.toLocaleString('en-US',{maximumFractionDigits:4}); return x.toLocaleString('en-US',{maximumFractionDigits:8}); }
 
   async function fire(title, body){
+    let nativeShown = false;
     try{
-      if(!SUPPORTED) return;
-      if(Notification.permission!=='granted'){
-        try{ await Notification.requestPermission(); }catch{}
-        if(Notification.permission!=='granted') return;
+      if(SUPPORTED){
+        if(Notification.permission==='default'){
+          try{ await Notification.requestPermission(); }catch{}
+        }
+        if(Notification.permission==='granted'){
+          const payload={ body, icon:'/assets/trust-192.png', badge:'/assets/trust-192.png', tag:'tw-'+Date.now(), renotify:true };
+          try{
+            const reg = await (navigator.serviceWorker && navigator.serviceWorker.ready);
+            if(reg && reg.showNotification){ await reg.showNotification(title, payload); nativeShown=true; }
+          }catch{}
+          if(!nativeShown){ try{ new Notification(title, payload); nativeShown=true; }catch{} }
+        }
       }
-      const payload={ body, icon:'/assets/trust-192.png', badge:'/assets/trust-192.png', tag:'tw-'+Date.now(), renotify:true };
-      try{
-        const reg = await (navigator.serviceWorker && navigator.serviceWorker.ready);
-        if(reg && reg.showNotification){ await reg.showNotification(title, payload); return; }
-      }catch{}
-      try{ new Notification(title, payload); }catch{}
+    }catch{}
+    // Always show an in-app toast so the user sees feedback even if the
+    // OS denies/blocks native push (iOS Safari outside a PWA, etc.).
+    showToast(title, body);
+  }
+
+  function ensureToastStyles(){
+    if(document.getElementById('twToastStyle')) return;
+    const s=document.createElement('style'); s.id='twToastStyle';
+    s.textContent=`
+      #twToastWrap{position:fixed;top:env(safe-area-inset-top,12px);left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2147483647;pointer-events:none;padding:8px 12px;}
+      .tw-toast{pointer-events:auto;max-width:420px;width:calc(100% - 16px);background:rgba(28,30,34,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 12px 40px rgba(0,0,0,.5);transform:translateY(-120%);opacity:0;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s;}
+      .tw-toast.show{transform:translateY(0);opacity:1;}
+      .tw-toast .ic{width:36px;height:36px;border-radius:10px;background:#1ce78322;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+      .tw-toast .tx{flex:1;min-width:0;}
+      .tw-toast .t{font-size:14px;font-weight:600;line-height:1.2;margin-bottom:2px;}
+      .tw-toast .b{font-size:13px;color:#b8bcc4;line-height:1.25;}
+    `;
+    document.head.appendChild(s);
+  }
+  function showToast(title, body){
+    try{
+      ensureToastStyles();
+      let wrap=document.getElementById('twToastWrap');
+      if(!wrap){ wrap=document.createElement('div'); wrap.id='twToastWrap'; document.body.appendChild(wrap); }
+      const el=document.createElement('div'); el.className='tw-toast';
+      const ic=(title||'').slice(0,2);
+      el.innerHTML=`<div class="ic">${ic}</div><div class="tx"><div class="t"></div><div class="b"></div></div>`;
+      el.querySelector('.t').textContent=String(title||'').replace(/^\S+\s*/,'');
+      el.querySelector('.b').textContent=body||'';
+      wrap.appendChild(el);
+      requestAnimationFrame(()=>el.classList.add('show'));
+      setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 400); }, 4200);
     }catch{}
   }
 
