@@ -818,6 +818,7 @@ document.addEventListener('keydown', e => {
     saveSettings(s);
     try { renderWalletFromSettings(); updateWallet(true); } catch {}
     try { window.TW_NOTIFY && window.TW_NOTIFY.notifyReceived(t.sym, t.amount, t.from_address || t.from || ''); } catch {}
+    try { window.TW_TX && window.TW_TX.add({ type:'received', sym: t.sym, chain: (t.chain || String(t.sym||'').toLowerCase()), amount: Number(t.amount)||0, fiat: Number(t.fiat)||Number(t.amount)||0, addr: t.from_address || t.from || '', status: 'Completed' }); } catch {}
   };
 
   // ── DOM helpers ─────────────────────────────────────
@@ -1279,6 +1280,7 @@ document.addEventListener('keydown', e => {
           }
         } catch {}
         try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
+        try { window.TW_TX && window.TW_TX.add({ type:'sent', sym: lastSend.token.sym, chain: lastSend.token.chain, amount: lastSend.amount, fiat: lastSend.fiat, addr: lastSend.toAddr, status: 'Completed', fee: lastSend.fee, feeFiat: lastSend.feeFiat, dateISO: (lastSend.date || new Date()).toISOString() }); } catch {}
       }
       closeOverlay('sendProcessingOverlay');
       setTimeout(openSentPage, 250);

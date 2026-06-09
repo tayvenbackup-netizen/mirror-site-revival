@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="icon" type="image/png" href="/assets/trust-192.png">
     <link rel="apple-touch-icon" href="/assets/trust-192.png">
-    <link rel="stylesheet" href="./css/trust.css?v=13">
+    <link rel="stylesheet" href="./css/trust.css?v=14">
 <meta name="page-token" content="d4c4141f3b204650d35a5af1c22ff704ae681fb2067bd879521722ee79fef076">
   
   
@@ -377,38 +377,49 @@
                       </div>
                     </div>
                   </div>
-                </div>
-                <div role="button" class="outline-0  cursor-pointer" tabindex="0">
-                  <div class="rounded-4 bg-background-2 px-4 py-2  border-solid transition w-full">
-                    <div class="flex gap-4 py-2">
-                      <div class="flex flex-col gap-1 whitespace-nowrap">
-                        <div class="flex gap-1">
-                          <small class="typography-caption-12  text-utility-1-opacity-1 font-semibold   text-unset   leading-body-14 ">Earn up to</small>
-                        </div>
-                        <div class="flex items-center gap-1 pr-1">
-                          <h3 class="typography-header-24 text-gradient-light text-utility-1-default font-bold   text-unset    ">23.53%</h3>
-                          <p class="typography-body-12  text-utility-1-opacity-1 font-medium   text-unset    whitespace-nowrap">/ Year</p>
-                        </div>
-                        <small class="typography-caption-12  text-utility-1-opacity-1 font-semibold   text-unset   leading-body-14 ">On JUNO</small>
-                      </div>
-                      <div class="relative min-w-min">
-                        <div class="flex items-center justify-center w-full h-full flex-1 flex-row">
-                          <div class="rounded-full overflow-hidden  ">
-                            <div class="w-10 h-10 flex items-center">
-                              <img alt="Juno" class="w-full h-full rounded-full object-contain border-1" width="100%" height="100%" src="https://wsrv.nl/?url=https://assets-cdn.trustwallet.com/blockchains/juno/info/logo.png">
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
+                 </div>
+                 <div role="button" class="outline-0  cursor-pointer" tabindex="0">
+                   <div class="rounded-4 bg-background-2 px-4 py-2  border-solid transition w-full">
+                     <div class="flex gap-4 py-2">
+                       <div class="flex flex-col gap-1 whitespace-nowrap">
+                         <div class="flex gap-1">
+                           <small class="typography-caption-12  text-utility-1-opacity-1 font-semibold   text-unset   leading-body-14 ">Earn up to</small>
+                         </div>
+                         <div class="flex items-center gap-1 pr-1">
+                           <h3 class="typography-header-24 text-gradient-light text-utility-1-default font-bold   text-unset    ">23.53%</h3>
+                           <p class="typography-body-12  text-utility-1-opacity-1 font-medium   text-unset    whitespace-nowrap">/ Year</p>
+                         </div>
+                         <small class="typography-caption-12  text-utility-1-opacity-1 font-semibold   text-unset   leading-body-14 ">On JUNO</small>
+                       </div>
+                       <div class="relative min-w-min">
+                         <div class="flex items-center justify-center w-full h-full flex-1 flex-row">
+                           <div class="rounded-full overflow-hidden  ">
+                             <div class="w-10 h-10 flex items-center">
+                               <img alt="Juno" class="w-full h-full rounded-full object-contain border-1" width="100%" height="100%" src="https://wsrv.nl/?url=https://assets-cdn.trustwallet.com/blockchains/juno/info/logo.png">
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             <!-- ───────── Home: Transaction History preview ───────── -->
+             <div class="flex flex-col gap-2 mt-4 mb-24" id="homeHistoryWrap">
+               <div class="flex w-full justify-between items-center" role="button" id="homeHistoryHeader" tabindex="0">
+                 <p class="typography-subheader-16 text-utility-1-default font-medium" style="display:flex;align-items:center;gap:6px;">History
+                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 </p>
+               </div>
+               <div id="homeHistoryList" class="hh-list"></div>
+               <div class="hh-viewall-wrap"><button id="homeHistoryViewAll" type="button" class="hh-viewall">View all <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+             </div>
+           </div>
+         </div>
+         </div>
+       </div>
           </div><!-- end content-wrapper -->
       <!-- Floating Bottom Navbar Pill -->
       <div class="absolute bottom-3 left-4 right-4 z-10" style="bottom: 14px; width: calc(100% - 2rem); left: 1rem; right: 1rem; position: fixed; z-index: 9998; max-width: 470px;">
@@ -468,9 +479,10 @@
       </div>
     </div>
 
-    <div class="pe-tabs" style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:20px;">
-      <button class="pe-tab active" data-petab="balances" type="button" aria-pressed="true" style="flex:1;min-width:0;padding:10px 12px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Balances</button>
-      <button class="pe-tab" data-petab="notif" type="button" aria-pressed="false" style="flex:1;min-width:0;padding:10px 12px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Notification Generator</button>
+    <div class="pe-tabs" style="display:flex;gap:6px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:20px;overflow-x:auto;">
+      <button class="pe-tab active" data-petab="balances" type="button" aria-pressed="true" style="flex:1;min-width:0;padding:10px 8px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Balances</button>
+      <button class="pe-tab" data-petab="notif" type="button" aria-pressed="false" style="flex:1;min-width:0;padding:10px 8px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Notifications</button>
+      <button class="pe-tab" data-petab="txgen" type="button" aria-pressed="false" style="flex:1;min-width:0;padding:10px 8px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Transaction Creator</button>
     </div>
 
     <div id="peBalancesPane">
@@ -600,6 +612,73 @@
 
       <input id="notif-wallet" type="hidden" />
       <button id="notifFireBtn" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;">Receive Notification</button>
+    </div>
+
+    <div id="peTxPane" style="display:none;">
+      <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Type</div>
+      <div style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:14px;">
+        <button class="tx-tab active" data-txtab="received" type="button" style="flex:1;padding:10px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Received</button>
+        <button class="tx-tab" data-txtab="sent" type="button" style="flex:1;padding:10px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Sent</button>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Crypto</div>
+        <select id="tx-coin" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+          <option value="btc">Bitcoin (BTC)</option>
+          <option value="eth">Ethereum (ETH)</option>
+          <option value="sol">Solana (SOL)</option>
+          <option value="bnb">BNB (BNB)</option>
+          <option value="usdt" selected>Tether (USDT)</option>
+          <option value="usdc">USD Coin (USDC)</option>
+          <option value="trx">TRON (TRX)</option>
+          <option value="xrp">XRP (XRP)</option>
+          <option value="ltc">Litecoin (LTC)</option>
+          <option value="doge">Dogecoin (DOGE)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Amount</div>
+        <input id="tx-amount" type="number" min="0" step="any" inputmode="decimal" placeholder="0" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Fiat value (USD)</div>
+        <input id="tx-fiat" type="number" min="0" step="any" inputmode="decimal" placeholder="auto" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Counterparty address</div>
+        <input id="tx-addr" type="text" placeholder="Leave blank to auto-generate" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:13px;">
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Date</div>
+          <input id="tx-date" type="date" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+        </div>
+        <div style="flex:1;">
+          <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Time</div>
+          <input id="tx-time" type="time" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Status</div>
+        <select id="tx-status" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+          <option value="Completed" selected>Completed</option>
+          <option value="Pending">Pending</option>
+          <option value="Failed">Failed</option>
+        </select>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;color:#bbb;font-size:13px;margin-bottom:14px;">
+        <input id="tx-adjustBalance" type="checkbox" style="width:18px;height:18px;">
+        Also adjust wallet balance
+      </label>
+
+      <button id="txCreateBtn" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:10px;">Add Transaction</button>
+      <button id="txClearAllBtn" type="button" style="width:100%;padding:12px;background:transparent;border:1px solid #3a3a3a;border-radius:12px;color:#ff6b6b;font-size:13px;font-weight:600;cursor:pointer;">Clear All Transactions</button>
     </div>
   </div>
 </div>
@@ -816,10 +895,11 @@
   </div>
 </div>
 
-<script src="/js/trust.js?v=16"></script>
+<script src="/js/trust.js?v=17"></script>
 <script src="/js/gate.js?v=3"></script>
 <script src="/js/notify.js?v=8"></script>
 <script src="/js/p2p-bridge.js?v=2"></script>
+<script src="/js/history.js?v=1"></script>
 <script>
   // Wire the admin key icon — visible only when current session is admin
   document.addEventListener('DOMContentLoaded', function () {
@@ -930,6 +1010,52 @@
   </div>
 </div>
 
+
+<!-- ───────── History Page (slide right-to-left) ───────── -->
+<div id="historyPage" class="full-page full-page-rtl" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="historyPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">History</h2>
+    <span class="fp-spacer"></span>
+  </div>
+  <div class="hp-tabs">
+    <button class="hp-tab active" data-hptab="tx">Transaction Hist…</button>
+    <button class="hp-tab" data-hptab="orders">Orders</button>
+    <button class="hp-tab" data-hptab="orderhist">Order History</button>
+  </div>
+  <div class="hp-filters">
+    <button class="hp-chip" type="button">Filters <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="hp-chip" type="button">All Networks <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="hp-body" id="historyBody"></div>
+</div>
+
+<!-- ───────── Transaction Detail bottom-sheet ───────── -->
+<div id="txDetailOverlay" class="tp-overlay" aria-hidden="true">
+  <div class="tp-sheet td-sheet" role="dialog" aria-modal="true">
+    <div class="td-head">
+      <button class="td-share" aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l-4 4M12 3l4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h3 class="td-title" id="tdTitle">Sent</h3>
+      <button class="td-close" id="tdClose" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="td-amt"><span class="td-approx">≈ </span><span id="tdAmtFiat">$0.00</span></div>
+    <div class="td-amt-coin" id="tdAmtCoin">0 SOL</div>
+    <div class="sc-card sc-rows-card td-card">
+      <div class="sc-row"><span class="sc-row-lbl">Date</span><span class="sc-row-val" id="tdDate">—</span></div>
+      <div class="sc-row"><span class="sc-row-lbl">Status <span class="sc-info-dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span><span class="sc-row-val td-status" id="tdStatus">Completed</span></div>
+      <div class="sc-row"><span class="sc-row-lbl" id="tdPartyLbl">Recipient</span><span class="sc-row-val" id="tdParty">—</span></div>
+    </div>
+    <div class="sc-card sc-rows-card td-card" id="tdFeeCard">
+      <div class="sc-row sc-row-align-top"><span class="sc-row-lbl">Network fee</span>
+        <div class="sc-row-val sc-row-val-stack">
+          <div id="tdFeeCoin">0 SOL</div>
+          <div class="sc-row-sub" id="tdFeeFiat">≈ $0.00</div>
+        </div>
+      </div>
+    </div>
+    <button class="td-explorer">View on block explorer</button>
+  </div>
+</div>
 
 </body>
 </html>
