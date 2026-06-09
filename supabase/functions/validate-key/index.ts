@@ -92,7 +92,7 @@ async function audit(action: string, opts: Record<string, unknown> = {}) {
   try { await admin.from('audit_logs').insert({ action, actor_type: 'system', ...opts }); } catch {}
 }
 
-async function handleValidate(key: string, fp: string, ip: string) {
+async function handleValidate(key: string, fp: string, ip: string, ua: string) {
   if (!key || typeof key !== 'string' || !key.trim()) return json({ error: 'Key required' }, 400);
   const trimmed = key.trim();
   const hash = await sha256(trimmed);
@@ -136,11 +136,11 @@ async function handleValidate(key: string, fp: string, ip: string) {
   }
   if (row.device_fingerprint && row.device_fingerprint !== fp) {
     const geo = await geoLookup(ip);
-    await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true, device_info: req_ua });
+    await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true, device_info: ua });
     await admin.from('security_alerts').insert({
       key_id: row.id, device_fingerprint: fp, attempt_ip: ip,
       attempt_country: geo.country, attempt_region: geo.region, attempt_city: geo.city,
-      device_info: req_ua, reason: 'device_mismatch', blocked: true,
+      device_info: ua, reason: 'device_mismatch', blocked: true,
     });
     return json({ error: 'This key is bound to another device' }, 403);
   }
