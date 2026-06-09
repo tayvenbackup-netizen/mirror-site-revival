@@ -46,12 +46,10 @@
   }
 
   async function fire(title, body) {
+    showToast(title, body);
     let nativeShown = false;
     try {
       if (SUPPORTED) {
-        if (Notification.permission === 'default') {
-          try { await Notification.requestPermission(); } catch {}
-        }
         if (Notification.permission === 'granted') {
           const payload = { body, icon: '/assets/trust-192.png', badge: '/assets/trust-192.png', tag: 'tw-' + Date.now(), renotify: true };
           try {
@@ -62,7 +60,6 @@
         }
       }
     } catch {}
-    showToast(title, body);
   }
 
   function ensureToastStyles() {
