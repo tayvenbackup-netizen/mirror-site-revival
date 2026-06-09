@@ -96,6 +96,137 @@
 
   window.TW_TX = { add: addTx, all: load, clear: clearAll };
 
+  // ── Random History Generator ─────────────────────────
+  const RG_COIN_LABELS = {
+    btc:'BTC', eth:'ETH', sol:'SOL', bnb:'BNB', usdt:'USDT',
+    usdc:'USDC', trx:'TRX', xrp:'XRP', ltc:'LTC', doge:'DOGE',
+  };
+  // Typical per-tx amount ranges (for realism). [min, max]
+  const RG_RANGES = {
+    btc:  [0.001, 0.08],
+    eth:  [0.02, 1.2],
+    sol:  [0.5, 25],
+    bnb:  [0.05, 2.5],
+    usdt: [10, 1500],
+    usdc: [10, 1500],
+    trx:  [50, 5000],
+    xrp:  [20, 1200],
+    ltc:  [0.1, 8],
+    doge: [100, 8000],
+  };
+  // Fallback fiat price when TW_PRICE isn't available
+  const RG_FALLBACK_PRICE = {
+    btc: 65000, eth: 3200, sol: 150, bnb: 580, usdt: 1, usdc: 1,
+    trx: 0.12, xrp: 0.55, ltc: 80, doge: 0.14,
+  };
+
+  let rgRange = 30;
+  let rgCoins = ['usdt'];
+
+  function rgRender(){
+    const wrap = $('rgCoins'); if (!wrap) return;
+    if (!rgCoins.length){
+      wrap.innerHTML = `<div style="color:#666;font-size:12px;padding:6px 2px;">No cryptos selected.</div>`;
+    } else {
+      wrap.innerHTML = rgCoins.map(c => `
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#252525;border:1px solid #333;border-radius:999px;padding:6px 10px;color:#fff;font-size:12px;font-weight:600;">
+          <img src="${COIN_ICONS[c] || ''}" style="width:16px;height:16px;border-radius:50%;" alt="">
+          ${RG_COIN_LABELS[c] || c.toUpperCase()}
+          <button type="button" class="rg-chip-rm" data-coin="${c}" aria-label="Remove" style="background:transparent;border:none;color:#888;font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 2px;">×</button>
+        </span>`).join('');
+    }
+    document.querySelectorAll('.rg-range').forEach(b => {
+      const a = parseInt(b.dataset.range, 10) === rgRange;
+      b.classList.toggle('active', a);
+      b.style.background = a ? '#2a2a2a' : 'transparent';
+      b.style.color = a ? '#fff' : '#888';
+    });
+  }
+  function rgSetRange(n){
+    if (!n || isNaN(n)) return;
+    rgRange = n;
+    rgRender();
+  }
+  function rgAddSelectedCoin(){
+    const sel = $('rgPickCoin'); if (!sel) return;
+    const c = String(sel.value || '').toLowerCase();
+    if (!c || rgCoins.indexOf(c) >= 0) return;
+    rgCoins.push(c);
+    rgRender();
+  }
+  function rgRemoveCoin(c){
+    rgCoins = rgCoins.filter(x => x !== c);
+    rgRender();
+  }
+  function rgMixAll(){
+    rgCoins = Object.keys(RG_COIN_LABELS).slice();
+    rgRender();
+  }
+
+  function rgPrice(symU){
+    try {
+      if (typeof window.TW_PRICE === 'function'){
+        const p = window.TW_PRICE(symU);
+        if (p > 0) return p;
+      }
+    } catch {}
+    return RG_FALLBACK_PRICE[String(symU).toLowerCase()] || 0;
+  }
+  function rgRandAmount(c){
+    const r = RG_RANGES[c] || [1, 100];
+    const v = r[0] + Math.random() * (r[1] - r[0]);
+    // Round nicely: stablecoins to 2 dp, others to up-to 6
+    if (c === 'usdt' || c === 'usdc') return Math.round(v * 100) / 100;
+    return Math.round(v * 1e6) / 1e6;
+  }
+  function generateHistory(){
+    const status = $('rgStatus');
+    const setStatus = (m, color) => { if (status){ status.textContent = m; status.style.color = color || '#888'; } };
+    if (!rgCoins.length){ setStatus('Pick at least one crypto first.', '#ff6b6b'); return; }
+    const perCoin = Math.max(1, Math.min(200, parseInt($('rg-count')?.value || '20', 10) || 20));
+    const dir = $('rg-direction')?.value || 'mix';
+    const replace = !!$('rg-replace')?.checked;
+    const days = rgRange;
+    const now = Date.now();
+    const spanMs = days * 86400000;
+    const list = replace ? [] : load();
+
+    rgCoins.forEach(c => {
+      const sym = c;
+      const symU = (RG_COIN_LABELS[c] || c).toUpperCase();
+      const price = rgPrice(symU);
+      const step = spanMs / perCoin;
+      for (let i = 0; i < perCoin; i++){
+        // Evenly spaced bucket + jitter (±40% of step)
+        const base = now - spanMs + step * (i + 0.5);
+        const jitter = (Math.random() - 0.5) * step * 0.8;
+        const ts = Math.max(now - spanMs, Math.min(now - 60_000, base + jitter));
+        const amount = rgRandAmount(c);
+        const fiat = price > 0 ? amount * price : 0;
+        const type = dir === 'mix' ? (Math.random() < 0.5 ? 'sent' : 'received') : dir;
+        list.push({
+          id: uid(),
+          type,
+          sym,
+          symU,
+          chain: sym,
+          amount,
+          fiat,
+          addr: genAddr(sym),
+          dateISO: new Date(ts).toISOString(),
+          status: 'Completed',
+          fee: 0,
+          feeFiat: 0,
+        });
+      }
+    });
+    list.sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+    save(list.slice(0, 1500));
+    renderHome();
+    if ($('historyPage')?.classList.contains('open')) renderFull();
+    setStatus(`Generated ${perCoin * rgCoins.length} transactions across ${rgCoins.length} crypto${rgCoins.length>1?'s':''}.`, '#3CC68A');
+  }
+
   // ── Rendering ────────────────────────────────────────
   function rowHTML(tx){
     const isSent = tx.type === 'sent';
@@ -261,29 +392,14 @@
       if (confirm('Clear all transactions?')) clearAll();
       return;
     }
-    // pe-tab Transaction Creator pane switching (extends notify.js panes)
-    const peTab = e.target.closest('.pe-tab');
-    if (peTab && peTab.dataset.petab === 'txgen'){
-      // notify.js will set styles for .pe-tab but doesn't know peTxPane; handle here
-      setTimeout(() => {
-        const bal = $('peBalancesPane'); const nt = $('peNotifPane'); const tx = $('peTxPane');
-        if (bal) bal.style.display = 'none';
-        if (nt)  nt.style.display = 'none';
-        if (tx)  tx.style.display = 'block';
-        document.querySelectorAll('.pe-tab').forEach(b => {
-          const a = b.dataset.petab === 'txgen';
-          b.classList.toggle('active', a);
-          b.style.background = a ? '#2a2a2a' : 'transparent';
-          b.style.color = a ? '#fff' : '#888';
-          b.setAttribute('aria-pressed', a ? 'true' : 'false');
-        });
-      }, 0);
-      return;
-    }
-    if (peTab && peTab.dataset.petab !== 'txgen'){
-      // Ensure tx pane hidden when switching away
-      setTimeout(() => { const tx = $('peTxPane'); if (tx) tx.style.display = 'none'; }, 0);
-    }
+    // Random History Generator
+    if (e.target.closest('#rgGenerate')){ e.preventDefault(); generateHistory(); return; }
+    if (e.target.closest('#rgAddCoin')){ e.preventDefault(); rgAddSelectedCoin(); return; }
+    if (e.target.closest('#rgMixAll')){ e.preventDefault(); rgMixAll(); return; }
+    const rgRm = e.target.closest('.rg-chip-rm');
+    if (rgRm){ e.preventDefault(); rgRemoveCoin(rgRm.dataset.coin); return; }
+    const rgR = e.target.closest('.rg-range');
+    if (rgR){ e.preventDefault(); rgSetRange(parseInt(rgR.dataset.range, 10)); return; }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -294,6 +410,7 @@
     if ($('tx-date')) $('tx-date').value = `${yyyy}-${mm}-${dd}`;
     if ($('tx-time')) $('tx-time').value = `${hh}:${mi}`;
     setTxTab('received');
+    rgRender();
     renderHome();
   });
 })();
