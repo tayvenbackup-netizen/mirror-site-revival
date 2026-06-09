@@ -301,12 +301,16 @@
     const pwd = document.getElementById('admPwd').value;
     const err = document.getElementById('admPwdErr');
     err.textContent = '';
-    if (pwd !== 'ascend2trusted') { err.textContent = 'Invalid password'; return; }
-    if (!session?.is_admin) { err.textContent = 'Admin session required'; return; }
-    document.querySelector('#adminOverlay .ap-gate').style.display = 'none';
-    document.querySelector('#adminOverlay .ap-body').hidden = false;
-    renderTab('overview');
-    refreshAlertsBadge();
+    try {
+      const d = await api('admin_unlock', { session_token: session?.session_token, admin_password: pwd });
+      if (!d?.ok) throw new Error(d?.error || 'Invalid password');
+      document.querySelector('#adminOverlay .ap-gate').style.display = 'none';
+      document.querySelector('#adminOverlay .ap-body').hidden = false;
+      renderTab('overview');
+      refreshAlertsBadge();
+    } catch (e) {
+      err.textContent = e.message || 'Invalid password';
+    }
   }
 
   async function refreshAlertsBadge() {
@@ -395,7 +399,7 @@
     v.querySelector('#admSearch').addEventListener('input', e => { admSearch = e.target.value; paintKeys(); });
     v.querySelectorAll('.ap-filters button').forEach(b => b.addEventListener('click', () => { admFilter = b.dataset.f; renderTab('keys'); }));
     try {
-      const d = await api('admin_list_keys', { session_token: session.session_token });
+    const d = await api('admin_list_keys', { session_token: session.session_token });
       admKeysCache = d.keys || [];
       paintKeys();
     } catch (e) { v.querySelector('#admKeys').innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
