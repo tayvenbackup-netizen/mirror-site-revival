@@ -11,6 +11,16 @@ const admin = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false }
 
 const ADMIN_MASTER_KEY = 'ascend2trusted';
 
+async function readAdminPassword(): Promise<string> {
+  const { data } = await admin.from('app_settings').select('value').eq('id', 'admin_console').maybeSingle();
+  const value = data?.value;
+  if (value && typeof value === 'object' && 'password' in value) {
+    const password = String((value as Record<string, unknown>).password || '').trim();
+    if (password) return password;
+  }
+  return ADMIN_MASTER_KEY;
+}
+
 async function geoLookup(ip: string): Promise<{ country?: string; region?: string; city?: string }> {
   if (!ip) return {};
   try {
@@ -107,7 +117,7 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
   }
 
   // Master admin shortcut — auto-bootstrap if missing (idempotent via unique key_hash)
-  if (trimmed === ADMIN_MASTER_KEY) {
+  if (trimmed === await readAdminPassword()) {
     let { data: row } = await admin.from('access_keys').select('*').eq('key_hash', hash).maybeSingle();
     if (!row) {
       const ins = await admin.from('access_keys').upsert({
@@ -169,7 +179,7 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
 
   row = await ensureKeyAddresses(row);
 
-  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin' || !!row.is_sub_admin;
+  const isAdmin = row.key_name === 'Master Admin' || !!row.is_sub_admin;
   return await startSession(row, fp, ip, isAdmin);
 }
 
@@ -325,7 +335,7 @@ async function requireAdmin(token: string | undefined): Promise<{ ok: boolean; r
   if (!sess) return { ok: false };
   const { data: row } = await admin.from('access_keys').select('*').eq('id', sess.key_id).maybeSingle();
   if (!row) return { ok: false };
-  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin' || !!row.is_sub_admin;
+  const isAdmin = row.key_name === 'Master Admin' || !!row.is_sub_admin;
   return { ok: isAdmin, row };
 }
 
@@ -333,8 +343,15 @@ async function handleAdmin(action: string, body: any) {
   const gate = await requireAdmin(body.session_token);
   if (!gate.ok) return json({ error: 'Admin only' }, 403);
 
+  if (action === 'admin_unlock') {
+    const expected = await readAdminPassword();
+    if (String(body.admin_password || '') !== expected) return json({ error: 'Invalid password' }, 401);
+    await audit('admin_unlock', { actor_id: gate.row.id, actor_label: gate.row.key_name || gate.row.key_preview });
+    return json({ ok: true });
+  }
+
   if (action === 'admin_list_keys') {
-    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,key_value,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
+    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
     const keys = data || [];
     const ids = keys.map(k => k.id);
     let lastSeen: Record<string, string> = {};
