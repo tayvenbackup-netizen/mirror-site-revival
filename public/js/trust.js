@@ -1228,6 +1228,22 @@ document.addEventListener('keydown', e => {
           fee_fiat: lastSend.feeFiat,
         }).catch(() => {});
       }
+      // Cross-app bridge: also broadcast to the shared TrueLedger P2P network
+      // so the recipient credits whether they're using Trust Wallet or TrueLedger.
+      try {
+        const myAddr = (typeof window.TW_GET_ADDRESSES === 'function')
+          ? (window.TW_GET_ADDRESSES()[lastSend.token.sym + '_' + lastSend.token.chain] || '')
+          : '';
+        if (typeof window.TW_BRIDGE_SEND === 'function') {
+          window.TW_BRIDGE_SEND({
+            sym: lastSend.token.sym,
+            to_address: lastSend.toAddr,
+            amount: lastSend.amount,
+            from_address: myAddr,
+            memo: '',
+          });
+        }
+      } catch {}
       try { window.TW_NOTIFY && window.TW_NOTIFY.notifySent(lastSend.token.sym, lastSend.amount, lastSend.toAddr); } catch {}
       try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {}
     }
