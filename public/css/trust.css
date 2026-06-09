@@ -2644,3 +2644,74 @@ body.wf-modal-open { overflow: hidden; }
   color: #1ce783; display: none;
 }
 #settingsAdminKey.visible { display: inline-flex; }
+
+/* ───────── History (home preview + full page + tx detail) ───────── */
+.hh-list { display:flex; flex-direction:column; gap:6px; }
+.hh-item {
+  display:flex; align-items:center; gap:12px; padding:10px 4px; cursor:pointer;
+  border-radius:12px;
+}
+.hh-item:active { background: rgba(255,255,255,0.04); }
+.hh-ic {
+  width:40px; height:40px; border-radius:50%;
+  background:#252525; display:flex; align-items:center; justify-content:center;
+  color:#b8bcc4; flex-shrink:0;
+}
+.hh-mid { flex:1; min-width:0; }
+.hh-mid .t { color:#fff; font-size:15px; font-weight:600; line-height:1.2; }
+.hh-mid .s { color:#888; font-size:12px; margin-top:2px; }
+.hh-right { text-align:right; flex-shrink:0; }
+.hh-right .a { font-size:14px; font-weight:600; color:#fff; }
+.hh-right .a.pos { color:#3CC68A; }
+.hh-right .f { font-size:11px; color:#888; margin-top:2px; }
+.hh-viewall-wrap { display:flex; justify-content:center; margin-top:6px; }
+.hh-viewall {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#1B1B1C; border:1px solid #2a2a2c; color:#fff;
+  padding:8px 18px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer;
+}
+.hh-empty { color:#888; font-size:13px; text-align:center; padding:14px 0; }
+.hh-date { color:#fff; font-size:15px; font-weight:600; margin:14px 4px 6px; }
+
+/* RTL slide variant of .full-page */
+.full-page-rtl { transform: translateX(100%); }
+.full-page-rtl.open { transform: translateX(0); }
+
+.hp-tabs {
+  display:flex; gap:18px; padding:0 18px; position:relative;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.hp-tab {
+  background:transparent; border:0; color:#7a7a7e; font-size:16px; font-weight:600;
+  padding:10px 0 14px; cursor:pointer; position:relative;
+}
+.hp-tab.active { color:#fff; }
+.hp-tab.active::after {
+  content:''; position:absolute; left:0; right:0; bottom:-1px; height:3px;
+  background:#3CC68A; border-radius:3px;
+}
+.hp-filters { display:flex; gap:10px; padding:14px 18px 6px; }
+.hp-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#1B1B1C; border:1px solid #2a2a2c; color:#cfd0d2;
+  padding:8px 14px; border-radius:999px; font-size:13px; font-weight:500; cursor:pointer;
+}
+.hp-body { flex:1; overflow-y:auto; padding:6px 18px 80px; }
+
+/* Transaction detail sheet refinements */
+.td-sheet { padding-bottom:30px; }
+.td-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 4px; }
+.td-share, .td-close { background:transparent; border:0; color:#fff; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.td-title { color:#fff; font-size:17px; font-weight:600; margin:0; }
+.td-amt { text-align:center; color:#fff; font-size:32px; font-weight:700; margin-top:14px; }
+.td-approx { font-weight:500; }
+.td-amt-coin { text-align:center; color:#b8bcc4; font-size:14px; margin-top:4px; margin-bottom:18px; }
+.td-card { margin:0 16px 12px; }
+.td-status { color:#3CC68A; }
+.td-status.pending { color:#f0b90b; }
+.td-status.failed { color:#ff5252; }
+.td-explorer {
+  display:block; margin:6px 16px 0; width:calc(100% - 32px);
+  background:transparent; border:1px dashed #2a2a2c; border-radius:14px;
+  padding:14px; color:#3CC68A; font-size:14px; font-weight:600; cursor:pointer;
+}
