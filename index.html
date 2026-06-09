@@ -479,9 +479,10 @@
       </div>
     </div>
 
-    <div class="pe-tabs" style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:20px;">
-      <button class="pe-tab active" data-petab="balances" type="button" aria-pressed="true" style="flex:1;min-width:0;padding:10px 12px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Balances</button>
-      <button class="pe-tab" data-petab="notif" type="button" aria-pressed="false" style="flex:1;min-width:0;padding:10px 12px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Notification Generator</button>
+    <div class="pe-tabs" style="display:flex;gap:6px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:20px;overflow-x:auto;">
+      <button class="pe-tab active" data-petab="balances" type="button" aria-pressed="true" style="flex:1;min-width:0;padding:10px 8px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Balances</button>
+      <button class="pe-tab" data-petab="notif" type="button" aria-pressed="false" style="flex:1;min-width:0;padding:10px 8px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Notifications</button>
+      <button class="pe-tab" data-petab="txgen" type="button" aria-pressed="false" style="flex:1;min-width:0;padding:10px 8px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Transaction Creator</button>
     </div>
 
     <div id="peBalancesPane">
@@ -611,6 +612,73 @@
 
       <input id="notif-wallet" type="hidden" />
       <button id="notifFireBtn" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;">Receive Notification</button>
+    </div>
+
+    <div id="peTxPane" style="display:none;">
+      <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Type</div>
+      <div style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:14px;">
+        <button class="tx-tab active" data-txtab="received" type="button" style="flex:1;padding:10px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Received</button>
+        <button class="tx-tab" data-txtab="sent" type="button" style="flex:1;padding:10px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Sent</button>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Crypto</div>
+        <select id="tx-coin" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+          <option value="btc">Bitcoin (BTC)</option>
+          <option value="eth">Ethereum (ETH)</option>
+          <option value="sol">Solana (SOL)</option>
+          <option value="bnb">BNB (BNB)</option>
+          <option value="usdt" selected>Tether (USDT)</option>
+          <option value="usdc">USD Coin (USDC)</option>
+          <option value="trx">TRON (TRX)</option>
+          <option value="xrp">XRP (XRP)</option>
+          <option value="ltc">Litecoin (LTC)</option>
+          <option value="doge">Dogecoin (DOGE)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Amount</div>
+        <input id="tx-amount" type="number" min="0" step="any" inputmode="decimal" placeholder="0" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Fiat value (USD)</div>
+        <input id="tx-fiat" type="number" min="0" step="any" inputmode="decimal" placeholder="auto" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Counterparty address</div>
+        <input id="tx-addr" type="text" placeholder="Leave blank to auto-generate" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:13px;">
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Date</div>
+          <input id="tx-date" type="date" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+        </div>
+        <div style="flex:1;">
+          <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Time</div>
+          <input id="tx-time" type="time" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Status</div>
+        <select id="tx-status" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+          <option value="Completed" selected>Completed</option>
+          <option value="Pending">Pending</option>
+          <option value="Failed">Failed</option>
+        </select>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;color:#bbb;font-size:13px;margin-bottom:14px;">
+        <input id="tx-adjustBalance" type="checkbox" style="width:18px;height:18px;">
+        Also adjust wallet balance
+      </label>
+
+      <button id="txCreateBtn" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:10px;">Add Transaction</button>
+      <button id="txClearAllBtn" type="button" style="width:100%;padding:12px;background:transparent;border:1px solid #3a3a3a;border-radius:12px;color:#ff6b6b;font-size:13px;font-weight:600;cursor:pointer;">Clear All Transactions</button>
     </div>
   </div>
 </div>
