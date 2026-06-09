@@ -941,11 +941,13 @@ document.addEventListener('keydown', e => {
   }
   function fiatFor(t, bal) {
     const sym = getCurrencySymbol();
-    if (!bal) {
+    const p = priceFor(t.sym);
+    const v = (bal || 0) * p;
+    if (!v) {
       const tiny = { msvp: '$0.01', ton: '$0.0004493', hex: '$0.0₅6000', strx: '$0.0₅1112', avax: '$0.0₅1722' };
       return tiny[t.sym.toLowerCase()] || `${sym}0.00`;
     }
-    return `${sym}${(bal * 1).toFixed(2)}`;
+    return `${sym}${v < 0.01 ? v.toFixed(4) : v.toFixed(2)}`;
   }
   function formatBal(b) {
     if (!b) return '0';
@@ -1227,7 +1229,7 @@ document.addEventListener('keydown', e => {
     const toAddr = $('#sendAddr').value.trim();
     const fromAddr = _ownAddrFor(sendToken);
     const fee = _feeFor(sendToken);
-    const fiat = amount * 1; // rough; would be real if price known
+    const fiat = amount * priceFor(sendToken.sym);
     const s = loadSettings();
     lastSend = {
       token: sendToken, amount, fiat, toAddr, fromAddr,
