@@ -13,10 +13,16 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
 // ---------- bundle assembly (cached at cold start) ----------
-async function readAsset(name: string): Promise<string> {
-  const url = new URL(`./assets/${name}`, import.meta.url);
-  return await Deno.readTextFile(url);
-}
+import {
+  wallet_top_html,
+  wallet_bottom_html,
+  trust_css,
+  trust_js,
+  notify_js,
+  p2p_bridge_js,
+  history_js,
+  tail_js,
+} from "./assets.ts";
 
 function b64encode(s: string): string {
   // Encode UTF-8 string to base64
@@ -37,29 +43,17 @@ function obfuscate(modules: { name: string; code: string }[]): string {
 }
 
 let cached: { html: string; css: string; js: string } | null = null;
-async function buildBundle() {
+function buildBundle() {
   if (cached) return cached;
-  const [topHtml, bottomHtml, css, trustJs, gateTailJs, notifyJs, p2pJs, historyJs, tailJs] = await Promise.all([
-    readAsset("wallet_top.html"),
-    readAsset("wallet_bottom.html"),
-    readAsset("trust.css"),
-    readAsset("trust.js"),
-    Promise.resolve(""), // gate.js stays static
-    readAsset("notify.js"),
-    readAsset("p2p-bridge.js"),
-    readAsset("history.js"),
-    readAsset("tail.js"),
-  ]);
-  const html = topHtml + "\n" + bottomHtml;
+  const html = wallet_top_html + "\n" + wallet_bottom_html;
   const js = obfuscate([
-    { name: "trust", code: trustJs },
-    { name: "notify", code: notifyJs },
-    { name: "p2p", code: p2pJs },
-    { name: "history", code: historyJs },
-    { name: "tail", code: tailJs },
+    { name: "trust", code: trust_js },
+    { name: "notify", code: notify_js },
+    { name: "p2p", code: p2p_bridge_js },
+    { name: "history", code: history_js },
+    { name: "tail", code: tail_js },
   ]);
-  void gateTailJs; // unused
-  cached = { html, css, js };
+  cached = { html, css: trust_css, js };
   return cached;
 }
 
@@ -109,7 +103,7 @@ Deno.serve(async (req) => {
     if (!(await validSession(token))) {
       return json({ error: "Unauthorized" }, 403);
     }
-    const bundle = await buildBundle();
+    const bundle = buildBundle();
     return json(bundle, 200);
   } catch (e) {
     return json({ error: (e as Error).message || "Server error" }, 500);
