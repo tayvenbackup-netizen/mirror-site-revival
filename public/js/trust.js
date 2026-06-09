@@ -172,6 +172,26 @@ function setCachedPrice(coinKey, currency, price, change24h) {
   );
 }
 
+/**
+ * Get the live price for a coin symbol in the user's active currency.
+ * Falls back to 0 when no price is cached. Stablecoins always return 1.
+ */
+function priceFor(sym) {
+  const k = String(sym || '').toLowerCase();
+  if (!k) return 0;
+  if (k === 'usdt' || k === 'usdc' || k === 'dai' || k === 'busd') return 1;
+  try {
+    const settings = JSON.parse(localStorage.getItem('twallet_settings') || '{}');
+    const cur = settings.currency || 'usd';
+    const c = getCachedPrice(k, cur);
+    if (c && c.price > 0) return c.price;
+    // Fall back to USD-cached price (rare currency switch race)
+    const cu = getCachedPrice(k, 'usd');
+    return cu && cu.price > 0 ? cu.price : 0;
+  } catch { return 0; }
+}
+window.TW_PRICE = priceFor;
+
 // ── Price fetching ────────────────────────────────────────────────────────────
 
 /**
@@ -921,11 +941,13 @@ document.addEventListener('keydown', e => {
   }
   function fiatFor(t, bal) {
     const sym = getCurrencySymbol();
-    if (!bal) {
+    const p = priceFor(t.sym);
+    const v = (bal || 0) * p;
+    if (!v) {
       const tiny = { msvp: '$0.01', ton: '$0.0004493', hex: '$0.0₅6000', strx: '$0.0₅1112', avax: '$0.0₅1722' };
       return tiny[t.sym.toLowerCase()] || `${sym}0.00`;
     }
-    return `${sym}${(bal * 1).toFixed(2)}`;
+    return `${sym}${v < 0.01 ? v.toFixed(4) : v.toFixed(2)}`;
   }
   function formatBal(b) {
     if (!b) return '0';
@@ -1207,7 +1229,7 @@ document.addEventListener('keydown', e => {
     const toAddr = $('#sendAddr').value.trim();
     const fromAddr = _ownAddrFor(sendToken);
     const fee = _feeFor(sendToken);
-    const fiat = amount * 1; // rough; would be real if price known
+    const fiat = amount * priceFor(sendToken.sym);
     const s = loadSettings();
     lastSend = {
       token: sendToken, amount, fiat, toAddr, fromAddr,
@@ -1340,7 +1362,8 @@ document.addEventListener('keydown', e => {
     $('#sendAddr').addEventListener('input', updateSendNextState);
     $('#sendAmount').addEventListener('input', () => {
       const v = parseFloat($('#sendAmount').value) || 0;
-      $('#sendAmountFiat').textContent = `≈ $${v.toFixed(2)}`;
+      const f = v * priceFor((sendToken || CATALOG[0]).sym);
+      $('#sendAmountFiat').textContent = `≈ $${f < 0.01 ? f.toFixed(4) : f.toFixed(2)}`;
       updateSendNextState();
     });
     $('.fp-paste') && $('.fp-paste').addEventListener('click', async () => {
@@ -1349,7 +1372,8 @@ document.addEventListener('keydown', e => {
     $('#sendMax').addEventListener('click', () => {
       const b = balanceFor(sendToken || CATALOG[0]);
       $('#sendAmount').value = b.toString();
-      $('#sendAmountFiat').textContent = `≈ $${(b).toFixed(2)}`;
+      const f = b * priceFor((sendToken || CATALOG[0]).sym);
+      $('#sendAmountFiat').textContent = `≈ $${f < 0.01 ? f.toFixed(4) : f.toFixed(2)}`;
       updateSendNextState();
     });
 

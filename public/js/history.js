@@ -93,6 +93,8 @@
   // ── Rendering ────────────────────────────────────────
   function rowHTML(tx){
     const isSent = tx.type === 'sent';
+    const live = (typeof window.TW_PRICE === 'function') ? window.TW_PRICE(tx.symU || tx.sym) : 0;
+    const fiat = live > 0 ? (Number(tx.amount) || 0) * live : (Number(tx.fiat) || 0);
     const icon = isSent
       ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M12 19l-6-6M12 19l6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -103,7 +105,7 @@
     return `<div class="hh-item" data-txid="${tx.id}">
       <div class="hh-ic">${icon}</div>
       <div class="hh-mid"><div class="t">${label}</div><div class="s">${sub}</div></div>
-      <div class="hh-right"><div class="a ${amtCls}">${sign}${fmtAmt(tx.amount)} ${tx.symU}</div><div class="f">${fmtFiat(tx.fiat)}</div></div>
+      <div class="hh-right"><div class="a ${amtCls}">${sign}${fmtAmt(tx.amount)} ${tx.symU}</div><div class="f">${fmtFiat(fiat)}</div></div>
     </div>`;
   }
 
@@ -138,8 +140,12 @@
   function openDetail(tx){
     const o = $('txDetailOverlay'); if (!o) return;
     const isSent = tx.type === 'sent';
+    // Live fiat recompute when a current price is available
+    const live = (typeof window.TW_PRICE === 'function') ? window.TW_PRICE(tx.symU || tx.sym) : 0;
+    const liveFiat = live > 0 ? (Number(tx.amount) || 0) * live : (Number(tx.fiat) || 0);
+    const liveFeeFiat = (live > 0 && tx.fee > 0) ? tx.fee * live : (Number(tx.feeFiat) || 0);
     $('tdTitle').textContent = isSent ? 'Sent' : 'Received';
-    $('tdAmtFiat').textContent = '$' + (Math.abs(tx.fiat) || 0).toFixed(4);
+    $('tdAmtFiat').textContent = '$' + Math.abs(liveFiat).toFixed(liveFiat && Math.abs(liveFiat) < 0.01 ? 4 : 2);
     $('tdAmtCoin').textContent = `${isSent ? '-' : '+'}${fmtAmt(tx.amount)} ${tx.symU}`;
     $('tdDate').textContent = fmtFullDate(new Date(tx.dateISO));
     const st = $('tdStatus');
@@ -151,7 +157,7 @@
     if (tx.fee > 0){
       feeCard.style.display = '';
       $('tdFeeCoin').textContent = `${tx.fee} ${tx.symU}`;
-      $('tdFeeFiat').textContent = '≈ $' + (tx.feeFiat || 0).toFixed(4);
+      $('tdFeeFiat').textContent = '≈ $' + liveFeeFiat.toFixed(liveFeeFiat < 0.01 ? 4 : 2);
     } else {
       feeCard.style.display = 'none';
     }
