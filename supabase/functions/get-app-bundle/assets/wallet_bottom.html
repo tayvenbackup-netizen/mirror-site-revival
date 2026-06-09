@@ -1,0 +1,146 @@
+<!-- ───────── Send Confirm Page ───────── -->
+<div id="sendConfirmPage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="sendConfirmPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">Confirm send</h2>
+    <span class="fp-spacer"></span>
+  </div>
+  <div class="sc-body">
+    <div class="sc-card sc-amt-card">
+      <img id="scTokenIcon" alt="" />
+      <div class="sc-amt-text">
+        <div class="sc-amt-fiat" id="scAmtFiat">$0.00</div>
+        <div class="sc-amt-coin" id="scAmtCoin">0 SOL</div>
+      </div>
+    </div>
+    <div class="sc-card sc-rows-card">
+      <div class="sc-row"><span class="sc-row-lbl">From</span>
+        <div class="sc-row-val sc-row-val-stack">
+          <div id="scFromName">Main Wallet</div>
+          <div class="sc-row-sub" id="scFromAddr">—</div>
+        </div>
+      </div>
+      <div class="sc-row"><span class="sc-row-lbl">To</span><span class="sc-row-val" id="scToAddr">—</span></div>
+      <div class="sc-row"><span class="sc-row-lbl">Network</span><span class="sc-row-val" id="scNetwork">—</span></div>
+    </div>
+    <div class="sc-card sc-fee-card">
+      <div class="sc-row">
+        <span class="sc-row-lbl">Network fee
+          <span class="sc-info-dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        </span>
+        <div class="sc-fee-right">
+          <div class="sc-fee-fiat"><img id="scFeeIcon" alt=""/><span id="scFeeFiat">$0.06</span></div>
+          <div class="sc-row-sub" id="scFeeCoin">0.00090638 SOL</div>
+        </div>
+        <svg class="sc-fee-chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#1ce783" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="sc-total-bar">
+    <div class="sc-total">
+      <span>Total cost</span>
+      <span id="scTotal">$0.00</span>
+    </div>
+    <button class="fp-cta" id="sendConfirmContinue">Continue</button>
+  </div>
+</div>
+
+<!-- ───────── Send Processing Bottom-Sheet ───────── -->
+<div id="sendProcessingOverlay" class="sp-overlay" aria-hidden="true">
+  <div class="sp-sheet" role="dialog" aria-modal="true">
+    <button class="sp-close" data-close="sendProcessingOverlay" aria-label="Close">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="sp-art">
+      <svg viewBox="0 0 220 220" width="200" height="200">
+        <ellipse cx="110" cy="135" rx="78" ry="34" fill="none" stroke="#2f6bff" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <ellipse cx="110" cy="135" rx="78" ry="34" fill="none" stroke="#2f6bff" stroke-width="1" opacity=".5" transform="rotate(15 110 135)"/>
+        <polygon points="78,128 102,152 168,82 184,98 102,184 62,142" fill="#1ce783" stroke="#0d2bd9" stroke-width="3" stroke-linejoin="round"/>
+        <polygon points="64,90 70,82 76,90 70,98" fill="#1ce783"/>
+        <polygon points="148,72 154,64 160,72 154,80" fill="#1ce783"/>
+        <rect x="106" y="40" width="6" height="14" rx="2" fill="#2f6bff"/>
+      </svg>
+    </div>
+    <h3 class="sp-title">Processing...</h3>
+    <p class="sp-sub">Transaction in progress! Blockchain validation is underway. This may take a few minutes.</p>
+    <button class="fp-cta sp-cta" id="sendProcessingDetails">Transaction details</button>
+  </div>
+</div>
+
+<!-- ───────── Sent (Transaction Details) Page ───────── -->
+<div id="sendSentPage" class="full-page" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="sendSentPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">Sent</h2>
+    <button class="fp-close" aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l-4 4M12 3l4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="ss-body">
+    <div class="ss-amt"><span class="ss-approx">≈ </span><span id="ssAmtFiat">$0.00</span></div>
+    <div class="ss-amt-coin" id="ssAmtCoin">-0 SOL</div>
+    <div class="sc-card sc-rows-card ss-card">
+      <div class="sc-row"><span class="sc-row-lbl">Date</span><span class="sc-row-val" id="ssDate">—</span></div>
+      <div class="sc-row"><span class="sc-row-lbl">Status <span class="sc-info-dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span><span class="sc-row-val" id="ssStatus">Pending</span></div>
+      <div class="sc-row"><span class="sc-row-lbl">Recipient</span><span class="sc-row-val" id="ssRecipient">—</span></div>
+    </div>
+    <div class="sc-card sc-rows-card ss-card">
+      <div class="sc-row sc-row-align-top"><span class="sc-row-lbl">Network fee <span class="sc-info-dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span>
+        <div class="sc-row-val sc-row-val-stack ss-fee-stack">
+          <div id="ssFeeCoin">0.00090638 SOL</div>
+          <div class="sc-row-sub" id="ssFeeFiat">≈ $0.0609</div>
+        </div>
+      </div>
+      <div class="sc-row"><span class="sc-row-lbl">Nonce</span><span class="sc-row-val">0</span></div>
+    </div>
+  </div>
+  <div class="ss-cta-bar">
+    <button class="ss-explorer">View on block explorer</button>
+  </div>
+</div>
+
+
+<!-- ───────── History Page (slide right-to-left) ───────── -->
+<div id="historyPage" class="full-page full-page-rtl" aria-hidden="true">
+  <div class="fp-header">
+    <button class="fp-back" data-close="historyPage"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2 class="fp-title">History</h2>
+    <span class="fp-spacer"></span>
+  </div>
+  <div class="hp-tabs">
+    <button class="hp-tab active" data-hptab="tx">Transaction Hist…</button>
+    <button class="hp-tab" data-hptab="orders">Orders</button>
+    <button class="hp-tab" data-hptab="orderhist">Order History</button>
+  </div>
+  <div class="hp-filters">
+    <button class="hp-chip" type="button">Filters <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="hp-chip" type="button">All Networks <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="hp-body" id="historyBody"></div>
+</div>
+
+<!-- ───────── Transaction Detail bottom-sheet ───────── -->
+<div id="txDetailOverlay" class="tp-overlay" aria-hidden="true">
+  <div class="tp-sheet td-sheet" role="dialog" aria-modal="true">
+    <div class="td-head">
+      <button class="td-share" aria-label="Share"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l-4 4M12 3l4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h3 class="td-title" id="tdTitle">Sent</h3>
+      <button class="td-close" id="tdClose" aria-label="Close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="td-amt"><span class="td-approx">≈ </span><span id="tdAmtFiat">$0.00</span></div>
+    <div class="td-amt-coin" id="tdAmtCoin">0 SOL</div>
+    <div class="sc-card sc-rows-card td-card">
+      <div class="sc-row"><span class="sc-row-lbl">Date</span><span class="sc-row-val" id="tdDate">—</span></div>
+      <div class="sc-row"><span class="sc-row-lbl">Status <span class="sc-info-dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 8.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></span><span class="sc-row-val td-status" id="tdStatus">Completed</span></div>
+      <div class="sc-row"><span class="sc-row-lbl" id="tdPartyLbl">Recipient</span><span class="sc-row-val" id="tdParty">—</span></div>
+    </div>
+    <div class="sc-card sc-rows-card td-card" id="tdFeeCard">
+      <div class="sc-row sc-row-align-top"><span class="sc-row-lbl">Network fee</span>
+        <div class="sc-row-val sc-row-val-stack">
+          <div id="tdFeeCoin">0 SOL</div>
+          <div class="sc-row-sub" id="tdFeeFiat">≈ $0.00</div>
+        </div>
+      </div>
+    </div>
+    <button class="td-explorer">View on block explorer</button>
+  </div>
+</div>
+
