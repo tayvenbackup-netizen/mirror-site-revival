@@ -482,11 +482,11 @@ Deno.serve(async (req) => {
 
   try {
     if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua);
-    if (action === 'check_session') return await handleCheckSession(body.session_token);
-    if (action === 'session_heartbeat') return await handleHeartbeat(body.session_token);
+    if (action === 'check_session') return await handleCheckSession(body.session_token, body.device_fingerprint, ip, ua);
+    if (action === 'session_heartbeat') return await handleHeartbeat(body.session_token, body.device_fingerprint, ip, ua);
     if (action === 'logout') return await handleLogout(body.session_token);
-    if (action === 'p2p_send') return await handleP2PSend(body);
-    if (action === 'ack_transfers') return await handleAckTransfers(body);
+    if (action === 'p2p_send') return await handleP2PSend(body, ip, ua);
+    if (action === 'ack_transfers') return await handleAckTransfers(body, ip, ua);
     if (action.startsWith('admin_')) return await handleAdmin(action, body);
     return json({ error: 'Unknown action' }, 400);
   } catch (e) {
