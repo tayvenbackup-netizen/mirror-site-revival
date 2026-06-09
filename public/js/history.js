@@ -29,8 +29,14 @@
   function fmtFiat(n){
     const x = Math.abs(Number(n) || 0);
     if (x === 0) return '$0.00';
-    if (x < 0.01) return '≈ $' + x.toFixed(4);
-    return '≈ $' + x.toFixed(2);
+    if (x < 0.01) return '≈ $' + x.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+    return '≈ $' + x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function fmtFiatDetail(n){
+    const x = Math.abs(Number(n) || 0);
+    if (x === 0) return '$0.00';
+    if (x < 0.01) return '$' + x.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+    return '$' + x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   }
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtFullDate(d){
