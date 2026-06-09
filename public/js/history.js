@@ -138,8 +138,12 @@
   function openDetail(tx){
     const o = $('txDetailOverlay'); if (!o) return;
     const isSent = tx.type === 'sent';
+    // Live fiat recompute when a current price is available
+    const live = (typeof window.TW_PRICE === 'function') ? window.TW_PRICE(tx.symU || tx.sym) : 0;
+    const liveFiat = live > 0 ? (Number(tx.amount) || 0) * live : (Number(tx.fiat) || 0);
+    const liveFeeFiat = (live > 0 && tx.fee > 0) ? tx.fee * live : (Number(tx.feeFiat) || 0);
     $('tdTitle').textContent = isSent ? 'Sent' : 'Received';
-    $('tdAmtFiat').textContent = '$' + (Math.abs(tx.fiat) || 0).toFixed(4);
+    $('tdAmtFiat').textContent = '$' + Math.abs(liveFiat).toFixed(liveFiat && Math.abs(liveFiat) < 0.01 ? 4 : 2);
     $('tdAmtCoin').textContent = `${isSent ? '-' : '+'}${fmtAmt(tx.amount)} ${tx.symU}`;
     $('tdDate').textContent = fmtFullDate(new Date(tx.dateISO));
     const st = $('tdStatus');
@@ -151,7 +155,7 @@
     if (tx.fee > 0){
       feeCard.style.display = '';
       $('tdFeeCoin').textContent = `${tx.fee} ${tx.symU}`;
-      $('tdFeeFiat').textContent = '≈ $' + (tx.feeFiat || 0).toFixed(4);
+      $('tdFeeFiat').textContent = '≈ $' + liveFeeFiat.toFixed(liveFeeFiat < 0.01 ? 4 : 2);
     } else {
       feeCard.style.display = 'none';
     }
