@@ -77,27 +77,7 @@
     document.head.appendChild(s);
   }
 
-  function showToast(title, body) {
-    try {
-      ensureToastStyles();
-      let wrap = document.getElementById('twToastWrap');
-      if (!wrap) { wrap = document.createElement('div'); wrap.id = 'twToastWrap'; document.body.appendChild(wrap); }
-      // Always re-attach to end of <body> so the wrap stays above any overlay
-      // that was opened after toast styles were first injected.
-      if (wrap.parentNode !== document.body || wrap.nextSibling) {
-        document.body.appendChild(wrap);
-      }
-      const el = document.createElement('div');
-      el.className = 'tw-toast';
-      const ic = (title || '').slice(0, 2);
-      el.innerHTML = `<div class="ic">${ic}</div><div class="tx"><div class="t"></div><div class="b"></div></div>`;
-      el.querySelector('.t').textContent = String(title || '').replace(/^\S+\s*/, '');
-      el.querySelector('.b').textContent = body || '';
-      wrap.appendChild(el);
-      requestAnimationFrame(() => el.classList.add('show'));
-      setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 4200);
-    } catch {}
-  }
+  function showToast() { /* in-app toasts disabled; native notifications only */ }
 
   function notifySent(sym, amount, toAddr) {
     const s = String(sym || '').toUpperCase();
