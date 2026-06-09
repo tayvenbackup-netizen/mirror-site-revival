@@ -641,6 +641,65 @@
 
       <button id="txCreateBtn" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:10px;">Add Transaction</button>
       <button id="txClearAllBtn" type="button" style="width:100%;padding:12px;background:transparent;border:1px solid #3a3a3a;border-radius:12px;color:#ff6b6b;font-size:13px;font-weight:600;cursor:pointer;">Clear All Transactions</button>
+
+      <!-- Random History Generator -->
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid #2a2a2a;">
+        <div style="color:#fff;font-size:15px;font-weight:600;margin-bottom:4px;">Random History Generator</div>
+        <div style="color:#777;font-size:12px;margin-bottom:14px;">Spread realistic transactions evenly over time across one or more cryptos.</div>
+
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Time range</div>
+        <div style="display:flex;gap:6px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:16px;">
+          <button class="rg-range active" data-range="30" type="button" style="flex:1;padding:10px 6px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">30d</button>
+          <button class="rg-range" data-range="60" type="button" style="flex:1;padding:10px 6px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;">60d</button>
+          <button class="rg-range" data-range="90" type="button" style="flex:1;padding:10px 6px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;">90d</button>
+          <button class="rg-range" data-range="365" type="button" style="flex:1;padding:10px 6px;background:transparent;border:none;border-radius:10px;color:#888;font-size:12px;font-weight:600;cursor:pointer;">1 year</button>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="color:#888;font-size:12px;text-transform:uppercase;">Cryptos to mix</span>
+          <button id="rgMixAll" type="button" style="background:transparent;border:1px solid #333;border-radius:8px;color:#bbb;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;">Mix all</button>
+        </div>
+        <div id="rgCoins" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:34px;"></div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <select id="rgPickCoin" style="flex:1;padding:10px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+            <option value="btc">Bitcoin (BTC)</option>
+            <option value="eth">Ethereum (ETH)</option>
+            <option value="sol">Solana (SOL)</option>
+            <option value="bnb">BNB (BNB)</option>
+            <option value="usdt">Tether (USDT)</option>
+            <option value="usdc">USD Coin (USDC)</option>
+            <option value="trx">TRON (TRX)</option>
+            <option value="xrp">XRP (XRP)</option>
+            <option value="ltc">Litecoin (LTC)</option>
+            <option value="doge">Dogecoin (DOGE)</option>
+          </select>
+          <button id="rgAddCoin" type="button" style="padding:0 18px;background:#2a2a2a;border:1px solid #333;border-radius:10px;color:#3CC68A;font-size:20px;font-weight:700;cursor:pointer;line-height:1;">+</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <div style="flex:1;">
+            <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Per coin</div>
+            <input id="rg-count" type="number" min="1" max="200" value="20" style="width:100%;padding:10px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+          </div>
+          <div style="flex:1;">
+            <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:6px;">Send / Receive</div>
+            <select id="rg-direction" style="width:100%;padding:10px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+              <option value="mix">Mix both</option>
+              <option value="received">Received only</option>
+              <option value="sent">Sent only</option>
+            </select>
+          </div>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;color:#bbb;font-size:13px;margin-bottom:14px;">
+          <input id="rg-replace" type="checkbox" style="width:18px;height:18px;">
+          Replace existing history
+        </label>
+
+        <button id="rgGenerate" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;">Generate Random History</button>
+        <div id="rgStatus" style="color:#888;font-size:12px;text-align:center;margin-top:8px;min-height:16px;"></div>
+      </div>
     </div>
   </div>
 </div>
