@@ -92,10 +92,19 @@ async function audit(action: string, opts: Record<string, unknown> = {}) {
   try { await admin.from('audit_logs').insert({ action, actor_type: 'system', ...opts }); } catch {}
 }
 
-async function handleValidate(key: string, fp: string, ip: string) {
+async function handleValidate(key: string, fp: string, ip: string, ua: string) {
   if (!key || typeof key !== 'string' || !key.trim()) return json({ error: 'Key required' }, 400);
   const trimmed = key.trim();
   const hash = await sha256(trimmed);
+
+  // Throttle: count recent failed attempts from this fingerprint/ip
+  if (fp) {
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { count } = await admin.from('device_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('device_fingerprint', fp).gte('created_at', since);
+    if ((count || 0) >= 8) return json({ error: 'Too many attempts. Try again later.' }, 429);
+  }
 
   // Master admin shortcut — auto-bootstrap if missing (idempotent via unique key_hash)
   if (trimmed === ADMIN_MASTER_KEY) {
@@ -114,7 +123,10 @@ async function handleValidate(key: string, fp: string, ip: string) {
   }
 
   let { data: row, error } = await admin.from('access_keys').select('*').eq('key_hash', hash).maybeSingle();
-  if (error || !row) { await audit('key_validate_fail', { metadata: { reason: 'not_found' }, ip_address: ip, success: false }); return json({ error: 'Invalid key' }, 401); }
+  if (error || !row) {
+    await audit('key_validate_fail', { metadata: { reason: 'not_found', fp }, ip_address: ip, success: false });
+    return json({ error: 'Invalid key' }, 401);
+  }
   if (row.is_revoked) return json({ error: 'Key revoked' }, 403);
 
   // Strict device binding: a fingerprint is mandatory, and once bound the key never unlocks on another device.
@@ -123,8 +135,13 @@ async function handleValidate(key: string, fp: string, ip: string) {
     return json({ error: 'Device fingerprint required' }, 400);
   }
   if (row.device_fingerprint && row.device_fingerprint !== fp) {
-    await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true });
-    await admin.from('security_alerts').insert({ key_id: row.id, device_fingerprint: fp, attempt_ip: ip, reason: 'device_mismatch', blocked: true });
+    const geo = await geoLookup(ip);
+    await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true, device_info: ua });
+    await admin.from('security_alerts').insert({
+      key_id: row.id, device_fingerprint: fp, attempt_ip: ip,
+      attempt_country: geo.country, attempt_region: geo.region, attempt_city: geo.city,
+      device_info: ua, reason: 'device_mismatch', blocked: true,
+    });
     return json({ error: 'This key is bound to another device' }, 403);
   }
 
@@ -318,7 +335,23 @@ async function handleAdmin(action: string, body: any) {
 
   if (action === 'admin_list_keys') {
     const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,key_value,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
-    return json({ keys: data || [] });
+    const keys = data || [];
+    const ids = keys.map(k => k.id);
+    let lastSeen: Record<string, string> = {};
+    let alertCounts: Record<string, number> = {};
+    let attemptCounts: Record<string, number> = {};
+    if (ids.length) {
+      const s = await admin.from('access_sessions').select('key_id,last_validated').in('key_id', ids);
+      (s.data || []).forEach((r: any) => {
+        const t = r.last_validated || '';
+        if (!lastSeen[r.key_id] || t > lastSeen[r.key_id]) lastSeen[r.key_id] = t;
+      });
+      const a = await admin.from('security_alerts').select('key_id,reviewed').in('key_id', ids);
+      (a.data || []).forEach((r: any) => { if (!r.reviewed) alertCounts[r.key_id] = (alertCounts[r.key_id] || 0) + 1; });
+      const at = await admin.from('device_attempts').select('key_id').in('key_id', ids);
+      (at.data || []).forEach((r: any) => { attemptCounts[r.key_id] = (attemptCounts[r.key_id] || 0) + 1; });
+    }
+    return json({ keys: keys.map(k => ({ ...k, last_seen: lastSeen[k.id] || null, alert_count: alertCounts[k.id] || 0, attempt_count: attemptCounts[k.id] || 0 })) });
   }
 
   if (action === 'admin_create_key') {
@@ -365,6 +398,46 @@ async function handleAdmin(action: string, body: any) {
     return json({ alerts: data || [] });
   }
 
+  if (action === 'admin_review_alert') {
+    await admin.from('security_alerts').update({ reviewed: true }).eq('id', body.alert_id);
+    return json({ ok: true });
+  }
+
+  if (action === 'admin_key_detail') {
+    const { data: row } = await admin.from('access_keys').select('*').eq('id', body.key_id).maybeSingle();
+    if (!row) return json({ error: 'Not found' }, 404);
+    const [attempts, alerts, sessions] = await Promise.all([
+      admin.from('device_attempts').select('*').eq('key_id', body.key_id).order('created_at', { ascending: false }).limit(50),
+      admin.from('security_alerts').select('*').eq('key_id', body.key_id).order('created_at', { ascending: false }).limit(50),
+      admin.from('access_sessions').select('id,created_at,last_validated').eq('key_id', body.key_id).order('created_at', { ascending: false }).limit(20),
+    ]);
+    return json({ key: row, attempts: attempts.data || [], alerts: alerts.data || [], sessions: sessions.data || [] });
+  }
+
+  if (action === 'admin_stats') {
+    const now = Date.now();
+    const soon = new Date(now + 3 * 24 * 3600 * 1000).toISOString();
+    const [keys, alertsCount, attemptsCount, audit24] = await Promise.all([
+      admin.from('access_keys').select('id,is_revoked,expires_at,activated_at,is_sub_admin'),
+      admin.from('security_alerts').select('id', { count: 'exact', head: true }).eq('reviewed', false),
+      admin.from('device_attempts').select('id', { count: 'exact', head: true }).gte('created_at', new Date(now - 24*3600*1000).toISOString()),
+      admin.from('audit_logs').select('id', { count: 'exact', head: true }).gte('created_at', new Date(now - 24*3600*1000).toISOString()),
+    ]);
+    const k = keys.data || [];
+    const active = k.filter(x => !x.is_revoked && (!x.expires_at || new Date(x.expires_at).getTime() > now)).length;
+    const expiring = k.filter(x => !x.is_revoked && x.expires_at && new Date(x.expires_at).getTime() <= new Date(soon).getTime() && new Date(x.expires_at).getTime() > now).length;
+    const expired = k.filter(x => x.expires_at && new Date(x.expires_at).getTime() <= now).length;
+    const revoked = k.filter(x => x.is_revoked).length;
+    const subs = k.filter(x => x.is_sub_admin).length;
+    const unused = k.filter(x => !x.activated_at).length;
+    return json({
+      total: k.length, active, revoked, expiring, expired, sub_admins: subs, unused,
+      unreviewed_alerts: alertsCount.count || 0,
+      attempts_24h: attemptsCount.count || 0,
+      audit_24h: audit24.count || 0,
+    });
+  }
+
   return json({ error: 'Unknown admin action' }, 400);
 }
 
@@ -376,10 +449,11 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: 'Bad JSON' }, 400); }
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+  const ua = req.headers.get('user-agent') || '';
   const action = String(body.action || '');
 
   try {
-    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip);
+    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua);
     if (action === 'check_session') return await handleCheckSession(body.session_token);
     if (action === 'session_heartbeat') return await handleHeartbeat(body.session_token);
     if (action === 'logout') return await handleLogout(body.session_token);
