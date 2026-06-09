@@ -1362,7 +1362,8 @@ document.addEventListener('keydown', e => {
     $('#sendAddr').addEventListener('input', updateSendNextState);
     $('#sendAmount').addEventListener('input', () => {
       const v = parseFloat($('#sendAmount').value) || 0;
-      $('#sendAmountFiat').textContent = `≈ $${v.toFixed(2)}`;
+      const f = v * priceFor((sendToken || CATALOG[0]).sym);
+      $('#sendAmountFiat').textContent = `≈ $${f < 0.01 ? f.toFixed(4) : f.toFixed(2)}`;
       updateSendNextState();
     });
     $('.fp-paste') && $('.fp-paste').addEventListener('click', async () => {
@@ -1371,7 +1372,8 @@ document.addEventListener('keydown', e => {
     $('#sendMax').addEventListener('click', () => {
       const b = balanceFor(sendToken || CATALOG[0]);
       $('#sendAmount').value = b.toString();
-      $('#sendAmountFiat').textContent = `≈ $${(b).toFixed(2)}`;
+      const f = b * priceFor((sendToken || CATALOG[0]).sym);
+      $('#sendAmountFiat').textContent = `≈ $${f < 0.01 ? f.toFixed(4) : f.toFixed(2)}`;
       updateSendNextState();
     });
 
