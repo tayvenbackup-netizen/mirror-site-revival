@@ -261,29 +261,14 @@
       if (confirm('Clear all transactions?')) clearAll();
       return;
     }
-    // pe-tab Transaction Creator pane switching (extends notify.js panes)
-    const peTab = e.target.closest('.pe-tab');
-    if (peTab && peTab.dataset.petab === 'txgen'){
-      // notify.js will set styles for .pe-tab but doesn't know peTxPane; handle here
-      setTimeout(() => {
-        const bal = $('peBalancesPane'); const nt = $('peNotifPane'); const tx = $('peTxPane');
-        if (bal) bal.style.display = 'none';
-        if (nt)  nt.style.display = 'none';
-        if (tx)  tx.style.display = 'block';
-        document.querySelectorAll('.pe-tab').forEach(b => {
-          const a = b.dataset.petab === 'txgen';
-          b.classList.toggle('active', a);
-          b.style.background = a ? '#2a2a2a' : 'transparent';
-          b.style.color = a ? '#fff' : '#888';
-          b.setAttribute('aria-pressed', a ? 'true' : 'false');
-        });
-      }, 0);
-      return;
-    }
-    if (peTab && peTab.dataset.petab !== 'txgen'){
-      // Ensure tx pane hidden when switching away
-      setTimeout(() => { const tx = $('peTxPane'); if (tx) tx.style.display = 'none'; }, 0);
-    }
+    // Random History Generator
+    if (e.target.closest('#rgGenerate')){ e.preventDefault(); generateHistory(); return; }
+    if (e.target.closest('#rgAddCoin')){ e.preventDefault(); rgAddSelectedCoin(); return; }
+    if (e.target.closest('#rgMixAll')){ e.preventDefault(); rgMixAll(); return; }
+    const rgRm = e.target.closest('.rg-chip-rm');
+    if (rgRm){ e.preventDefault(); rgRemoveCoin(rgRm.dataset.coin); return; }
+    const rgR = e.target.closest('.rg-range');
+    if (rgR){ e.preventDefault(); rgSetRange(parseInt(rgR.dataset.range, 10)); return; }
   });
 
   document.addEventListener('DOMContentLoaded', () => {

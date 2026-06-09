@@ -122,13 +122,16 @@
   }
 
   function setPortfolioTab(tab) {
-    const nextTab = tab === 'notif' ? 'notif' : 'balances';
+    const allowed = ['balances', 'notif', 'txgen'];
+    const nextTab = allowed.indexOf(tab) >= 0 ? tab : 'balances';
     persistEditorState({ editorTab: nextTab });
     updateSegmentState('.pe-tab', nextTab, 'petab');
     const balPane = $('peBalancesPane');
     const notPane = $('peNotifPane');
+    const txPane  = $('peTxPane');
     if (balPane) balPane.style.display = nextTab === 'balances' ? 'block' : 'none';
-    if (notPane) notPane.style.display = nextTab === 'notif' ? 'block' : 'none';
+    if (notPane) notPane.style.display = nextTab === 'notif'    ? 'block' : 'none';
+    if (txPane)  txPane.style.display  = nextTab === 'txgen'    ? 'block' : 'none';
   }
 
   function setNotificationType(type) {
