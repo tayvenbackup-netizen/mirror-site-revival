@@ -3,7 +3,12 @@
 // and admin actions (list_keys, create_key, revoke_key, delete_key,
 // update_key, clear_devices, list_audit, list_alerts).
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+
+const corsHeaders: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-fingerprint, x-session-token, x-csrf-token',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+};
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
