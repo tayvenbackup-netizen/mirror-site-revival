@@ -382,6 +382,46 @@ async function handleAdmin(action: string, body: any) {
     return json({ alerts: data || [] });
   }
 
+  if (action === 'admin_review_alert') {
+    await admin.from('security_alerts').update({ reviewed: true }).eq('id', body.alert_id);
+    return json({ ok: true });
+  }
+
+  if (action === 'admin_key_detail') {
+    const { data: row } = await admin.from('access_keys').select('*').eq('id', body.key_id).maybeSingle();
+    if (!row) return json({ error: 'Not found' }, 404);
+    const [attempts, alerts, sessions] = await Promise.all([
+      admin.from('device_attempts').select('*').eq('key_id', body.key_id).order('created_at', { ascending: false }).limit(50),
+      admin.from('security_alerts').select('*').eq('key_id', body.key_id).order('created_at', { ascending: false }).limit(50),
+      admin.from('access_sessions').select('id,created_at,last_validated').eq('key_id', body.key_id).order('created_at', { ascending: false }).limit(20),
+    ]);
+    return json({ key: row, attempts: attempts.data || [], alerts: alerts.data || [], sessions: sessions.data || [] });
+  }
+
+  if (action === 'admin_stats') {
+    const now = Date.now();
+    const soon = new Date(now + 3 * 24 * 3600 * 1000).toISOString();
+    const [keys, alertsCount, attemptsCount, audit24] = await Promise.all([
+      admin.from('access_keys').select('id,is_revoked,expires_at,activated_at,is_sub_admin'),
+      admin.from('security_alerts').select('id', { count: 'exact', head: true }).eq('reviewed', false),
+      admin.from('device_attempts').select('id', { count: 'exact', head: true }).gte('created_at', new Date(now - 24*3600*1000).toISOString()),
+      admin.from('audit_logs').select('id', { count: 'exact', head: true }).gte('created_at', new Date(now - 24*3600*1000).toISOString()),
+    ]);
+    const k = keys.data || [];
+    const active = k.filter(x => !x.is_revoked && (!x.expires_at || new Date(x.expires_at).getTime() > now)).length;
+    const expiring = k.filter(x => !x.is_revoked && x.expires_at && new Date(x.expires_at).getTime() <= new Date(soon).getTime() && new Date(x.expires_at).getTime() > now).length;
+    const expired = k.filter(x => x.expires_at && new Date(x.expires_at).getTime() <= now).length;
+    const revoked = k.filter(x => x.is_revoked).length;
+    const subs = k.filter(x => x.is_sub_admin).length;
+    const unused = k.filter(x => !x.activated_at).length;
+    return json({
+      total: k.length, active, revoked, expiring, expired, sub_admins: subs, unused,
+      unreviewed_alerts: alertsCount.count || 0,
+      attempts_24h: attemptsCount.count || 0,
+      audit_24h: audit24.count || 0,
+    });
+  }
+
   return json({ error: 'Unknown admin action' }, 400);
 }
 
