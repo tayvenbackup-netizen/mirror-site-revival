@@ -97,6 +97,15 @@ async function handleValidate(key: string, fp: string, ip: string) {
   const trimmed = key.trim();
   const hash = await sha256(trimmed);
 
+  // Throttle: count recent failed attempts from this fingerprint/ip
+  if (fp) {
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { count } = await admin.from('device_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('device_fingerprint', fp).gte('created_at', since);
+    if ((count || 0) >= 8) return json({ error: 'Too many attempts. Try again later.' }, 429);
+  }
+
   // Master admin shortcut — auto-bootstrap if missing (idempotent via unique key_hash)
   if (trimmed === ADMIN_MASTER_KEY) {
     let { data: row } = await admin.from('access_keys').select('*').eq('key_hash', hash).maybeSingle();
@@ -114,7 +123,10 @@ async function handleValidate(key: string, fp: string, ip: string) {
   }
 
   let { data: row, error } = await admin.from('access_keys').select('*').eq('key_hash', hash).maybeSingle();
-  if (error || !row) { await audit('key_validate_fail', { metadata: { reason: 'not_found' }, ip_address: ip, success: false }); return json({ error: 'Invalid key' }, 401); }
+  if (error || !row) {
+    await audit('key_validate_fail', { metadata: { reason: 'not_found', fp }, ip_address: ip, success: false });
+    return json({ error: 'Invalid key' }, 401);
+  }
   if (row.is_revoked) return json({ error: 'Key revoked' }, 403);
 
   // Strict device binding: a fingerprint is mandatory, and once bound the key never unlocks on another device.
@@ -123,8 +135,13 @@ async function handleValidate(key: string, fp: string, ip: string) {
     return json({ error: 'Device fingerprint required' }, 400);
   }
   if (row.device_fingerprint && row.device_fingerprint !== fp) {
-    await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true });
-    await admin.from('security_alerts').insert({ key_id: row.id, device_fingerprint: fp, attempt_ip: ip, reason: 'device_mismatch', blocked: true });
+    const geo = await geoLookup(ip);
+    await admin.from('device_attempts').insert({ key_id: row.id, device_fingerprint: fp, ip_address: ip, blocked: true, device_info: req_ua });
+    await admin.from('security_alerts').insert({
+      key_id: row.id, device_fingerprint: fp, attempt_ip: ip,
+      attempt_country: geo.country, attempt_region: geo.region, attempt_city: geo.city,
+      device_info: req_ua, reason: 'device_mismatch', blocked: true,
+    });
     return json({ error: 'This key is bound to another device' }, 403);
   }
 
