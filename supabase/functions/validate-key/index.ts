@@ -239,14 +239,11 @@ async function startSession(row: any, fp: string, ip: string, isAdmin: boolean) 
 }
 
 async function handleCheckSession(token: string | undefined) {
-  if (!token) return json({ valid: false });
-  const { data: sess } = await admin.from('access_sessions').select('*').eq('session_token', token).maybeSingle();
-  if (!sess) return json({ valid: false });
-  let { data: row } = await admin.from('access_keys').select('*').eq('id', sess.key_id).maybeSingle();
-  if (!row || row.is_revoked) return json({ valid: false });
-  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return json({ valid: false });
-  row = await ensureKeyAddresses(row);
-  const isAdmin = row.key_value === ADMIN_MASTER_KEY || row.key_name === 'Master Admin' || !!row.is_sub_admin;
+  const ctx = await validateSessionContext(token, bodyFp, bodyIp, bodyUa);
+  if (!ctx) return json({ valid: false });
+  const { sess } = ctx;
+  let row = await ensureKeyAddresses(ctx.row);
+  const isAdmin = row.key_name === 'Master Admin' || !!row.is_sub_admin;
   await admin.from('access_sessions').update({ last_validated: new Date().toISOString() }).eq('id', sess.id);
   return json({
     valid: true, session_token: token, csrf_token: rand(24),
@@ -260,12 +257,9 @@ async function handleCheckSession(token: string | undefined) {
 }
 
 async function handleHeartbeat(token: string | undefined) {
-  if (!token) return json({ revoked: true });
-  const { data: sess } = await admin.from('access_sessions').select('*').eq('session_token', token).maybeSingle();
-  if (!sess) return json({ revoked: true });
-  const { data: row } = await admin.from('access_keys').select('id,is_revoked,expires_at').eq('id', sess.key_id).maybeSingle();
-  if (!row || row.is_revoked) return json({ revoked: true });
-  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return json({ revoked: true });
+  const ctx = await validateSessionContext(token, bodyFp, bodyIp, bodyUa);
+  if (!ctx) return json({ revoked: true });
+  const { sess } = ctx;
   await admin.from('access_sessions').update({ last_validated: new Date().toISOString() }).eq('id', sess.id);
   await admin.from('key_sessions').update({ last_heartbeat: new Date().toISOString() }).eq('session_token', token);
   return json({ ok: true });
@@ -280,12 +274,8 @@ async function handleLogout(token: string | undefined) {
 
 // ---------- P2P transfers ----------
 async function sessionToKey(token: string | undefined) {
-  if (!token) return null;
-  const { data: sess } = await admin.from('access_sessions').select('*').eq('session_token', token).maybeSingle();
-  if (!sess) return null;
-  const { data: row } = await admin.from('access_keys').select('*').eq('id', sess.key_id).maybeSingle();
-  if (!row || row.is_revoked) return null;
-  return row;
+  const ctx = await validateSessionContext(token, bodyFp, bodyIp, bodyUa);
+  return ctx?.row || null;
 }
 
 async function handleP2PSend(body: any) {
