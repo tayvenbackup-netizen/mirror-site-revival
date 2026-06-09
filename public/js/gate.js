@@ -168,6 +168,7 @@
               <option value="monthly">Monthly</option>
               <option value="lifetime">Lifetime</option>
             </select>
+            <label class="adm-checkbox"><input type="checkbox" id="admNewSubAdmin"> Make this a sub-admin key</label>
             <button id="admCreate">Create</button>
             <div id="admCreated" class="adm-created"></div>
           </div>
@@ -202,18 +203,28 @@
     try {
       const d = await api('admin_list_keys', { session_token: session.session_token });
       if (!d.keys?.length) { box.innerHTML = '<div class="adm-empty">No keys yet.</div>'; return; }
-      box.innerHTML = d.keys.map(k => `
+      box.innerHTML = d.keys.map(k => {
+        const loc = [k.activation_city, k.activation_region, k.activation_country].filter(Boolean).join(', ');
+        const fp = k.device_fingerprint ? (k.device_fingerprint.length > 14 ? k.device_fingerprint.slice(0,8) + '…' + k.device_fingerprint.slice(-4) : k.device_fingerprint) : '—';
+        const subTag = k.is_sub_admin ? '<span class="adm-row-sub">sub-admin</span>' : '';
+        return `
         <div class="adm-row" data-id="${k.id}">
           <div class="adm-row-main">
-            <div class="adm-row-name">${escapeHtml(k.key_name || '—')} <span class="adm-row-tag">${k.key_type}</span> ${k.is_revoked ? '<span class="adm-row-rev">revoked</span>' : ''}</div>
+            <div class="adm-row-name">${escapeHtml(k.key_name || '—')} <span class="adm-row-tag">${k.key_type}</span> ${subTag} ${k.is_revoked ? '<span class="adm-row-rev">revoked</span>' : ''}</div>
             <div class="adm-row-meta">${escapeHtml(k.key_value || k.key_preview)} · ${k.expires_at ? 'exp ' + new Date(k.expires_at).toLocaleDateString() : 'never'} · sessions ${k.session_count}</div>
+            <div class="adm-row-info">
+              <div><span class="adm-lbl">Device</span><span class="adm-val">${escapeHtml(fp)}</span></div>
+              <div><span class="adm-lbl">IP</span><span class="adm-val">${escapeHtml(k.activation_ip || '—')}</span></div>
+              <div><span class="adm-lbl">Location</span><span class="adm-val">${escapeHtml(loc || '—')}</span></div>
+            </div>
           </div>
           <div class="adm-row-act">
             <button data-act="clear">Clear device</button>
             <button data-act="${k.is_revoked ? 'unrevoke' : 'revoke'}">${k.is_revoked ? 'Unrevoke' : 'Revoke'}</button>
             <button data-act="delete" class="danger">Delete</button>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       box.querySelectorAll('.adm-row').forEach(row => {
         row.querySelectorAll('button[data-act]').forEach(btn => {
           btn.addEventListener('click', () => keyAction(row.dataset.id, btn.dataset.act));
@@ -232,12 +243,14 @@
     const name = document.getElementById('admNewName').value.trim();
     const value = document.getElementById('admNewValue').value.trim();
     const type = document.getElementById('admNewType').value;
+    const isSub = !!document.getElementById('admNewSubAdmin')?.checked;
     const out = document.getElementById('admCreated');
     try {
-      const d = await api('admin_create_key', { session_token: session.session_token, key_name: name || null, key_value: value || null, key_type: type });
+      const d = await api('admin_create_key', { session_token: session.session_token, key_name: name || null, key_value: value || null, key_type: type, is_sub_admin: isSub });
       out.innerHTML = `Created: <code>${escapeHtml(d.plaintext)}</code>`;
       document.getElementById('admNewName').value = '';
       document.getElementById('admNewValue').value = '';
+      const cb = document.getElementById('admNewSubAdmin'); if (cb) cb.checked = false;
       await loadKeys();
     } catch (e) { out.innerHTML = '<span class="gate-err">' + e.message + '</span>'; }
   }

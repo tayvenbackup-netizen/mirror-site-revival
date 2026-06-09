@@ -1912,7 +1912,7 @@ body {
 .tp-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.55);
-  z-index: 10001;
+  z-index: 11500;
   display: flex; justify-content: center; align-items: flex-end;
   opacity: 0; pointer-events: none;
   transition: opacity .25s ease;
@@ -2637,6 +2637,13 @@ body.wf-modal-open { overflow: hidden; }
 #adminOverlay .adm-row-act { display: flex; gap: 6px; flex-wrap: wrap; }
 #adminOverlay .adm-row-act button { font-size: 11px; padding: 6px 10px; background: #1f262b; color: #fff; }
 #adminOverlay .adm-row-act button.danger { background: #ff5d5d; }
+#adminOverlay .adm-row-sub { background: #3b82f622; color: #6ea8ff; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+#adminOverlay .adm-row-info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,.05); }
+#adminOverlay .adm-row-info > div { display: flex; flex-direction: column; min-width: 0; }
+#adminOverlay .adm-lbl { color: #6b7378; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+#adminOverlay .adm-val { color: #cfd0d2; font-size: 12px; word-break: break-all; }
+#adminOverlay .adm-checkbox { display: flex; align-items: center; gap: 8px; color: #cfd0d2; font-size: 13px; margin: 4px 0 10px; cursor: pointer; }
+#adminOverlay .adm-checkbox input { width: auto; margin: 0; }
 
 /* Key icon in balance editor header */
 #settingsAdminKey {
