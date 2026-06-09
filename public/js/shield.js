@@ -4,7 +4,7 @@
   try {
     var host = location.hostname || '';
     var DEV_HOSTS = ['localhost', '127.0.0.1'];
-    var EDITOR_HOSTS = ['lovable.dev', 'lovableproject.com'];
+    var EDITOR_HOSTS = ['lovable.dev', 'lovableproject.com', 'lovable.app'];
     var isEditor = EDITOR_HOSTS.some(function (h) { return host.indexOf(h) !== -1; });
     var isDev = DEV_HOSTS.indexOf(host) !== -1;
     if (isDev || isEditor) return; // never blank in dev / Lovable editor
