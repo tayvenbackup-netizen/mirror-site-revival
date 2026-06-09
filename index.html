@@ -467,7 +467,13 @@
         <button id="settingsClose" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;">×</button>
       </div>
     </div>
-    
+
+    <div class="pe-tabs" style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:20px;">
+      <button class="pe-tab active" data-petab="balances" style="flex:1;padding:10px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Balances</button>
+      <button class="pe-tab" data-petab="notif" style="flex:1;padding:10px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Notification Generator</button>
+    </div>
+
+    <div id="peBalancesPane">
     <div style="margin-bottom:24px;">
       <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:12px;">Wallet Name</div>
       <input id="set-walletName" type="text" placeholder="Ascend2k" maxlength="32" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;margin-bottom:8px;">
@@ -557,6 +563,44 @@
     </div>
     
     <button id="settingsConfirm" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;">Save</button>
+    </div>
+
+    <div id="peNotifPane" style="display:none;">
+      <button id="notifPushBtn" type="button" data-enabled="0" style="width:100%;padding:14px;background:#252525;border:1px solid #333;border-radius:12px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;">
+        <span id="notifPushIc" style="display:inline-flex;width:22px;height:22px;border-radius:50%;background:#3CC68A;color:#000;align-items:center;justify-content:center;font-size:13px;font-weight:700;">✕</span>
+        <span id="notifPushLabel">Enable Notifications</span>
+      </button>
+
+      <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Type</div>
+      <div style="display:flex;gap:8px;background:#1f1f1f;padding:4px;border-radius:12px;margin-bottom:18px;">
+        <button class="notif-tab active" data-ntab="received" style="flex:1;padding:10px;background:#2a2a2a;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Receive</button>
+        <button class="notif-tab" data-ntab="sent" style="flex:1;padding:10px;background:transparent;border:none;border-radius:10px;color:#888;font-size:13px;font-weight:600;cursor:pointer;">Send</button>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Crypto</div>
+        <select id="notif-coin" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+          <option value="btc">Bitcoin (BTC)</option>
+          <option value="eth">Ethereum (ETH)</option>
+          <option value="sol">Solana (SOL)</option>
+          <option value="bnb">BNB (BNB)</option>
+          <option value="usdt" selected>Tether (USDT)</option>
+          <option value="usdc">USD Coin (USDC)</option>
+          <option value="trx">TRON (TRX)</option>
+          <option value="xrp">XRP (XRP)</option>
+          <option value="ltc">Litecoin (LTC)</option>
+          <option value="doge">Dogecoin (DOGE)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <div style="color:#888;font-size:12px;text-transform:uppercase;margin-bottom:8px;">Amount</div>
+        <input id="notif-amount" type="number" min="0" step="any" placeholder="0" style="width:100%;padding:12px;background:#252525;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;">
+      </div>
+
+      <input id="notif-wallet" type="hidden" />
+      <button id="notifFireBtn" type="button" style="width:100%;padding:14px;background:#3CC68A;border:none;border-radius:12px;color:#000;font-size:16px;font-weight:600;cursor:pointer;">Send Notification</button>
+    </div>
   </div>
 </div>
 
@@ -774,7 +818,7 @@
 
 <script src="/js/trust.js?v=13"></script>
 <script src="/js/gate.js?v=3"></script>
-<script src="/js/notify.js?v=2"></script>
+<script src="/js/notify.js?v=3"></script>
 <script src="/js/p2p-bridge.js?v=1"></script>
 <script>
   // Wire the admin key icon — visible only when current session is admin
