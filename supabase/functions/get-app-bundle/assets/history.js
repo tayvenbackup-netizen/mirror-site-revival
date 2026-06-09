@@ -410,6 +410,7 @@
     if ($('tx-date')) $('tx-date').value = `${yyyy}-${mm}-${dd}`;
     if ($('tx-time')) $('tx-time').value = `${hh}:${mi}`;
     setTxTab('received');
+    rgRender();
     renderHome();
   });
 })();
