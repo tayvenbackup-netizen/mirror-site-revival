@@ -98,6 +98,27 @@ function json(body: unknown, status = 200) {
   });
 }
 
+async function validateSessionContext(token: string | undefined, fp: string | undefined, ip = '', ua = '') {
+  if (!token || !fp) return null;
+  const { data: sess } = await admin.from('access_sessions').select('*').eq('session_token', token).maybeSingle();
+  if (!sess) return null;
+  const { data: row } = await admin.from('access_keys').select('*').eq('id', sess.key_id).maybeSingle();
+  if (!row || row.is_revoked) return null;
+  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return null;
+  if (row.device_fingerprint && row.device_fingerprint !== fp) {
+    await admin.from('security_alerts').insert({
+      key_id: row.id,
+      device_fingerprint: fp,
+      attempt_ip: ip,
+      device_info: ua,
+      reason: 'session_device_mismatch',
+      blocked: true,
+    });
+    return null;
+  }
+  return { sess, row };
+}
+
 async function audit(action: string, opts: Record<string, unknown> = {}) {
   try { await admin.from('audit_logs').insert({ action, actor_type: 'system', ...opts }); } catch {}
 }
