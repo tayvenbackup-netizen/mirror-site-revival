@@ -69,8 +69,24 @@
       // Inject HTML into #root
       const root = document.getElementById('root');
       if (root) root.innerHTML = b.html;
+      // Patch DOMContentLoaded so late-registered handlers still fire
+      const _origAdd = document.addEventListener.bind(document);
+      document.addEventListener = function (type, fn, opts) {
+        if (type === 'DOMContentLoaded') {
+          if (document.readyState !== 'loading') {
+            try { setTimeout(function () { try { fn({ type: 'DOMContentLoaded' }); } catch (e) { console.error(e); } }, 0); } catch (e) {}
+            return;
+          }
+        }
+        return _origAdd(type, fn, opts);
+      };
       // Execute JS bundle in global scope
       try { (0, eval)(b.js); } catch (e) { console.error('bundle exec', e); }
+      // Re-dispatch readiness events so any window-level listeners also fire
+      try { window.dispatchEvent(new Event('DOMContentLoaded')); } catch (e) {}
+      try { window.dispatchEvent(new Event('load')); } catch (e) {}
+      // Restore original addEventListener after a tick
+      setTimeout(function () { document.addEventListener = _origAdd; }, 200);
       __bundleLoaded = true;
       return true;
     } catch (e) {
