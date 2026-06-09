@@ -44,24 +44,8 @@
   var mobile = uaMobile || (touch && coarse);
   if (!mobile) { blank('pc'); return; }
 
-  // ----- DevTools heuristics (desktop should already be blanked, but defense-in-depth) -----
-  function sizeCheck() {
-    try {
-      var wDiff = window.outerWidth - window.innerWidth;
-      var hDiff = window.outerHeight - window.innerHeight;
-      if (wDiff > 220 || hDiff > 240) blank('sz');
-    } catch (e) {}
-  }
-  function timingCheck() {
-    try {
-      var t = performance.now();
-      // eslint-disable-next-line no-debugger
-      debugger;
-      if (performance.now() - t > 120) blank('dbg');
-    } catch (e) {}
-  }
-  setInterval(sizeCheck, 1500);
-  setInterval(timingCheck, 4000);
+  // Safari/iOS can change viewport metrics and pause timers during normal use,
+  // so only hard-block obvious desktop entry and explicit shortcut attempts.
 
   // ----- Block dev shortcuts -----
   window.addEventListener('keydown', function (e) {
@@ -77,5 +61,5 @@
   // ----- Block context menu (right-click reveals view-source) -----
   window.addEventListener('contextmenu', function (e) { e.preventDefault(); }, true);
 
-  try { Object.freeze(window.TrustShield = { v: 2 }); } catch (e) {}
+  try { Object.freeze(window.TrustShield = { v: 3 }); } catch (e) {}
 })();

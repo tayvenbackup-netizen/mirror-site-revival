@@ -43,24 +43,8 @@ export function installDevtoolsShield() {
 
   if (!mobile) { blank('pc'); return; }
 
-  if (!mobile) {
-    const sizeCheck = () => {
-      const wDiff = window.outerWidth - window.innerWidth;
-      const hDiff = window.outerHeight - window.innerHeight;
-      if (wDiff > 220 || hDiff > 240) blank('sz');
-    };
-    setInterval(sizeCheck, 1500);
-  }
-
-  // Defense-in-depth: debugger-timing devtools detector
-  setInterval(() => {
-    try {
-      const t = performance.now();
-      // eslint-disable-next-line no-debugger
-      debugger;
-      if (performance.now() - t > 120) blank('dbg');
-    } catch {}
-  }, 4000);
+  // Safari/iOS can legitimately change viewport metrics and pause JS timers,
+  // so avoid self-destruct heuristics that can blank active mobile sessions.
 
   window.addEventListener('keydown', e => {
     const k = e.key?.toUpperCase();
@@ -71,5 +55,5 @@ export function installDevtoolsShield() {
   }, true);
 
   window.addEventListener('contextmenu', e => e.preventDefault(), true);
-  Object.freeze(_w.TrustShield = { v: 2 });
+  Object.freeze(_w.TrustShield = { v: 3 });
 }

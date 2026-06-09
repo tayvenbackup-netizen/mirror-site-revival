@@ -25,8 +25,13 @@
   async function api(action, body) {
     const r = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ action, ...(body || {}) }),
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON,
+        'x-device-fingerprint': DEVICE_FP,
+      },
+      body: JSON.stringify({ action, device_fingerprint: DEVICE_FP, ...(body || {}) }),
     });
     const t = await r.text();
     let d = {}; try { d = t ? JSON.parse(t) : {}; } catch { d = { error: t }; }
@@ -53,8 +58,9 @@
           'apikey': SUPABASE_ANON,
           'Authorization': 'Bearer ' + SUPABASE_ANON,
           'x-session-token': session.session_token,
+          'x-device-fingerprint': DEVICE_FP,
         },
-        body: JSON.stringify({ session_token: session.session_token }),
+        body: JSON.stringify({ session_token: session.session_token, device_fingerprint: DEVICE_FP }),
       });
       if (!r.ok) throw new Error('bundle http ' + r.status);
       const b = await r.json();
@@ -301,12 +307,16 @@
     const pwd = document.getElementById('admPwd').value;
     const err = document.getElementById('admPwdErr');
     err.textContent = '';
-    if (pwd !== 'ascend2trusted') { err.textContent = 'Invalid password'; return; }
-    if (!session?.is_admin) { err.textContent = 'Admin session required'; return; }
-    document.querySelector('#adminOverlay .ap-gate').style.display = 'none';
-    document.querySelector('#adminOverlay .ap-body').hidden = false;
-    renderTab('overview');
-    refreshAlertsBadge();
+    try {
+      const d = await api('admin_unlock', { session_token: session?.session_token, admin_password: pwd });
+      if (!d?.ok) throw new Error(d?.error || 'Invalid password');
+      document.querySelector('#adminOverlay .ap-gate').style.display = 'none';
+      document.querySelector('#adminOverlay .ap-body').hidden = false;
+      renderTab('overview');
+      refreshAlertsBadge();
+    } catch (e) {
+      err.textContent = e.message || 'Invalid password';
+    }
   }
 
   async function refreshAlertsBadge() {
@@ -395,7 +405,7 @@
     v.querySelector('#admSearch').addEventListener('input', e => { admSearch = e.target.value; paintKeys(); });
     v.querySelectorAll('.ap-filters button').forEach(b => b.addEventListener('click', () => { admFilter = b.dataset.f; renderTab('keys'); }));
     try {
-      const d = await api('admin_list_keys', { session_token: session.session_token });
+    const d = await api('admin_list_keys', { session_token: session.session_token });
       admKeysCache = d.keys || [];
       paintKeys();
     } catch (e) { v.querySelector('#admKeys').innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
@@ -412,7 +422,7 @@
     }
     if (admSearch) {
       const q = admSearch.toLowerCase();
-      const hay = [k.key_name, k.key_value, k.key_preview, k.activation_ip, k.activation_country, k.activation_city, k.activation_region, k.device_fingerprint].filter(Boolean).join(' ').toLowerCase();
+      const hay = [k.key_name, k.key_preview, k.activation_ip, k.activation_country, k.activation_city, k.activation_region, k.device_fingerprint].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -449,7 +459,7 @@
             ${k.is_sub_admin ? '<span class="ap-key-tag sub">sub-admin</span>' : ''}
             ${k.alert_count ? `<span class="ap-key-tag alert">${k.alert_count} alert${k.alert_count>1?'s':''}</span>` : ''}
           </div>
-          <div class="ap-key-sub">${escapeHtml(k.key_value || k.key_preview)} · ${status.t} · seen ${lastSeen}</div>
+          <div class="ap-key-sub">${escapeHtml(k.key_preview)} · ${status.t} · seen ${lastSeen}</div>
         </div>
         <div class="ap-key-chev">›</div>
       </div>
@@ -465,7 +475,6 @@
           <div><span class="ap-l">Blocked attempts</span><span class="ap-v" style="color:${k.attempt_count?'#ff8a5d':'#cfd0d2'}">${k.attempt_count || 0}</span></div>
         </div>
         <div class="ap-key-actions">
-          <button data-copy="${escapeHtml(k.key_value || '')}">Copy key</button>
           <button data-act="detail">View activity</button>
           <button data-act="clear">Clear device lock</button>
           <button data-act="${k.is_revoked ? 'unrevoke' : 'revoke'}">${k.is_revoked ? 'Unrevoke' : 'Revoke'}</button>

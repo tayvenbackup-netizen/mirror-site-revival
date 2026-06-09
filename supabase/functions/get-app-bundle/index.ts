@@ -58,8 +58,8 @@ function buildBundle() {
 }
 
 // ---------- session validation ----------
-async function validSession(token: string | null): Promise<boolean> {
-  if (!token) return false;
+async function validSession(token: string | null, fp: string | null): Promise<boolean> {
+  if (!token || !fp) return false;
   const { data: sess } = await admin
     .from("access_sessions")
     .select("id,key_id")
@@ -68,11 +68,12 @@ async function validSession(token: string | null): Promise<boolean> {
   if (!sess) return false;
   const { data: row } = await admin
     .from("access_keys")
-    .select("id,is_revoked,expires_at")
+    .select("id,is_revoked,expires_at,device_fingerprint")
     .eq("id", sess.key_id)
     .maybeSingle();
   if (!row || row.is_revoked) return false;
   if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return false;
+   if (row.device_fingerprint && row.device_fingerprint !== fp) return false;
   return true;
 }
 
@@ -94,13 +95,15 @@ Deno.serve(async (req) => {
   try {
     // Pull token from header or body
     let token = req.headers.get("x-session-token");
+    let fp = req.headers.get("x-device-fingerprint");
     if (!token && req.method === "POST") {
       try {
         const body = await req.json();
         if (body && typeof body.session_token === "string") token = body.session_token;
+        if (body && typeof body.device_fingerprint === "string") fp = body.device_fingerprint;
       } catch { /* ignore */ }
     }
-    if (!(await validSession(token))) {
+    if (!(await validSession(token, fp))) {
       return json({ error: "Unauthorized" }, 403);
     }
     const bundle = buildBundle();
