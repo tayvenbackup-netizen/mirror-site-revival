@@ -140,7 +140,8 @@
               amount: Number(x.amount),
               from_address: x.from_address || '',
             });
-          }
+          } else if (window.TW_NOTIFY) {
+            window.TW_NOTIFY.notifyReceived(String(x.coin || '').toUpperCase(), Number(x.amount), x.from_address || '');
           }
           seen.add(x.id);
         } catch {}
