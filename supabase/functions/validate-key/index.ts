@@ -371,8 +371,11 @@ async function handleAdmin(action: string, body: any) {
   }
 
   if (action === 'admin_list_keys') {
-    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
-    const keys = data || [];
+    // Exclude keys that belong to a reseller group — those live in the Reseller tab only.
+    const { data: rgs } = await admin.from('key_groups').select('id').eq('is_reseller', true);
+    const resellerGroupIds = new Set((rgs || []).map((g: any) => g.id));
+    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_value,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city,group_id').order('created_at', { ascending: false });
+    const keys = (data || []).filter((k: any) => !k.group_id || !resellerGroupIds.has(k.group_id));
     const ids = keys.map(k => k.id);
     let lastSeen: Record<string, string> = {};
     let alertCounts: Record<string, number> = {};
@@ -426,6 +429,138 @@ async function handleAdmin(action: string, body: any) {
     await admin.from('access_keys').update({ device_fingerprint: null, device_count: 0 }).eq('id', body.key_id);
     return json({ ok: true });
   }
+
+  // -------- Refresh (full reset) --------
+  async function refreshOneKey(keyId: string) {
+    await admin.from('access_keys').update({
+      device_fingerprint: null,
+      device_count: 0,
+      activated_at: null,
+      expires_at: null,
+      activation_ip: null,
+      activation_country: null,
+      activation_region: null,
+      activation_city: null,
+      session_count: 0,
+    }).eq('id', keyId);
+    await admin.from('access_sessions').delete().eq('key_id', keyId);
+    await admin.from('key_sessions').delete().eq('key_id', keyId);
+    await admin.from('device_attempts').delete().eq('key_id', keyId);
+  }
+
+  if (action === 'admin_refresh_key') {
+    if (!body.key_id) return json({ error: 'key_id required' }, 400);
+    await refreshOneKey(String(body.key_id));
+    await audit('key_refresh', { actor_id: gate.row.id, target_id: body.key_id });
+    return json({ ok: true });
+  }
+
+  if (action === 'admin_refresh_all_keys') {
+    if (gate.row.key_name !== 'Master Admin') return json({ error: 'Master admin only' }, 403);
+    // Reset every non-admin key (keep Master/sub-admin sessions intact)
+    const { data: rows } = await admin.from('access_keys')
+      .select('id,key_name,is_sub_admin')
+      .neq('id', gate.row.id);
+    const ids = (rows || []).filter(r => !r.is_sub_admin && r.key_name !== 'Master Admin').map(r => r.id);
+    for (const id of ids) await refreshOneKey(id);
+    await audit('keys_refresh_all', { actor_id: gate.row.id, metadata: { count: ids.length } });
+    return json({ ok: true, count: ids.length });
+  }
+
+  // -------- Groups / Resellers --------
+  if (action === 'admin_create_group') {
+    const name = String(body.name || '').trim();
+    if (!name) return json({ error: 'Name required' }, 400);
+    const isReseller = !!body.is_reseller;
+    const color = String(body.color || '#5ff7a8');
+    const { data, error } = await admin.from('key_groups').insert({
+      name, color, is_reseller: isReseller, created_by: gate.row.id,
+    }).select('*').single();
+    if (error) return json({ error: error.message }, 400);
+    await audit(isReseller ? 'reseller_create' : 'group_create', { actor_id: gate.row.id, target_id: data.id, target_label: name });
+    return json({ group: data });
+  }
+
+  if (action === 'admin_list_reseller_groups') {
+    if (gate.row.key_name !== 'Master Admin') return json({ error: 'Master admin only' }, 403);
+    const { data: groups } = await admin.from('key_groups').select('*').eq('is_reseller', true).order('created_at', { ascending: false });
+    const list = groups || [];
+    const ids = list.map((g: any) => g.id);
+    let counts: Record<string, number> = {};
+    if (ids.length) {
+      const { data: ks } = await admin.from('access_keys').select('group_id').in('group_id', ids);
+      (ks || []).forEach((r: any) => { counts[r.group_id] = (counts[r.group_id] || 0) + 1; });
+    }
+    return json({ groups: list.map((g: any) => ({ ...g, key_count: counts[g.id] || 0 })) });
+  }
+
+  if (action === 'admin_delete_reseller_group') {
+    if (gate.row.key_name !== 'Master Admin') return json({ error: 'Master admin only' }, 403);
+    const gid = String(body.group_id || '');
+    if (!gid) return json({ error: 'group_id required' }, 400);
+    // Delete all keys in this reseller group (cascades sessions/attempts via FK)
+    const { data: ks } = await admin.from('access_keys').select('id').eq('group_id', gid);
+    const kids = (ks || []).map((r: any) => r.id);
+    if (kids.length) {
+      await admin.from('access_sessions').delete().in('key_id', kids);
+      await admin.from('key_sessions').delete().in('key_id', kids);
+      await admin.from('device_attempts').delete().in('key_id', kids);
+      await admin.from('access_keys').delete().in('id', kids);
+    }
+    await admin.from('key_groups').delete().eq('id', gid);
+    await audit('reseller_delete', { actor_id: gate.row.id, target_id: gid });
+    return json({ ok: true });
+  }
+
+  if (action === 'admin_list_reseller_keys') {
+    if (gate.row.key_name !== 'Master Admin') return json({ error: 'Master admin only' }, 403);
+    const gid = String(body.group_id || '');
+    if (!gid) return json({ error: 'group_id required' }, 400);
+    const { data: g } = await admin.from('key_groups').select('*').eq('id', gid).eq('is_reseller', true).maybeSingle();
+    if (!g) return json({ error: 'Reseller not found' }, 404);
+    const { data } = await admin.from('access_keys')
+      .select('id,key_preview,key_name,key_value,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at')
+      .eq('group_id', gid)
+      .order('created_at', { ascending: false });
+    return json({ group: g, keys: data || [] });
+  }
+
+  if (action === 'admin_generate_bulk_keys') {
+    if (gate.row.key_name !== 'Master Admin') return json({ error: 'Master admin only' }, 403);
+    const gid = String(body.group_id || '');
+    const amount = Math.max(1, Math.min(200, Number(body.amount || 0)));
+    const allowedTypes = ['daily', '3day', 'weekly', 'monthly', 'lifetime'];
+    const keyType = allowedTypes.includes(String(body.key_type)) ? String(body.key_type) : 'weekly';
+    if (!gid || !amount) return json({ error: 'group_id and amount required' }, 400);
+    const { data: g } = await admin.from('key_groups').select('*').eq('id', gid).eq('is_reseller', true).maybeSingle();
+    if (!g) return json({ error: 'Reseller not found' }, 404);
+
+    const SAFE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
+    const block = () => {
+      let s = ''; const buf = new Uint8Array(4); crypto.getRandomValues(buf);
+      for (const b of buf) s += SAFE[b % SAFE.length];
+      return s;
+    };
+    const slug = String(g.name).replace(/[^A-Za-z0-9]+/g, '').slice(0, 20) || 'RSL';
+
+    const inserted: any[] = [];
+    for (let i = 0; i < amount; i++) {
+      // Plaintext value separate from human-readable name
+      const value = rand(12).toUpperCase();
+      const keyName = `${slug}-${block()}-${block()}`;
+      const hash = await sha256(value);
+      const { addrs } = ensureAddresses({});
+      const { data, error } = await admin.from('access_keys').insert({
+        key_hash: hash, key_preview: preview(value), key_type: keyType,
+        key_name: keyName, key_value: value, addresses: addrs,
+        group_id: gid, is_sub_admin: false,
+      }).select('id,key_name,key_value,key_preview,key_type,created_at').single();
+      if (!error && data) inserted.push(data);
+    }
+    await audit('reseller_bulk_generate', { actor_id: gate.row.id, target_id: gid, target_label: g.name, metadata: { count: inserted.length, key_type: keyType } });
+    return json({ ok: true, created: inserted });
+  }
+
   if (action === 'admin_audit') {
     const { data } = await admin.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100);
     return json({ logs: data || [] });

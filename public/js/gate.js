@@ -251,6 +251,9 @@
   let admKeysCache = [];
   let admSearch = '';
   let admFilter = 'all';
+  let admResellersCache = [];
+  let admActiveReseller = null; // { id, name }
+  let admResellerKeysCache = [];
 
   function buildAdmin() {
     const existing = document.getElementById('adminOverlay');
@@ -284,6 +287,7 @@
           <nav class="ap-tabs">
             <button data-t="overview" class="active">Overview</button>
             <button data-t="keys">Keys</button>
+            <button data-t="resellers" data-master-only="1" hidden>Resellers</button>
             <button data-t="alerts">Alerts <span id="admAlertsBadge" class="ap-badge" hidden>0</span></button>
             <button data-t="audit">Audit</button>
           </nav>
@@ -312,6 +316,9 @@
       if (!d?.ok) throw new Error(d?.error || 'Invalid password');
       document.querySelector('#adminOverlay .ap-gate').style.display = 'none';
       document.querySelector('#adminOverlay .ap-body').hidden = false;
+      // Show master-only tabs (Resellers)
+      const isMaster = !!session?.is_admin && !session?.is_sub_admin;
+      document.querySelectorAll('#adminOverlay [data-master-only]').forEach(el => { el.hidden = !isMaster; });
       renderTab('overview');
       refreshAlertsBadge();
     } catch (e) {
@@ -334,6 +341,7 @@
     if (!v) return;
     if (t === 'overview') return renderOverview(v);
     if (t === 'keys') return renderKeys(v);
+    if (t === 'resellers') return renderResellers(v);
     if (t === 'alerts') return renderAlerts(v);
     if (t === 'audit') return renderAudit(v);
   }
@@ -378,7 +386,10 @@
   async function renderKeys(v) {
     v.innerHTML = `
       <div class="ap-create">
-        <div class="ap-create-head"><h4>Create new key</h4></div>
+        <div class="ap-create-head">
+          <h4>Create new key</h4>
+          <button id="admRefreshAll" class="ap-btn-warn" title="Reset every non-admin key">Refresh all keys</button>
+        </div>
         <div class="ap-create-grid">
           <input id="admNewName" placeholder="Label (e.g. Client A)" />
           <input id="admNewValue" placeholder="Custom value (blank = random)" />
@@ -395,13 +406,14 @@
         <div id="admCreated" class="ap-created"></div>
       </div>
       <div class="ap-toolbar">
-        <input id="admSearch" placeholder="Search by name, value, IP, country…" value="${escapeHtml(admSearch)}"/>
+        <input id="admSearch" placeholder="Search by name, key value, preview, IP, country…" value="${escapeHtml(admSearch)}"/>
         <div class="ap-filters">
           ${['all','active','revoked','expiring','sub'].map(f => `<button data-f="${f}" class="${admFilter===f?'on':''}">${f}</button>`).join('')}
         </div>
       </div>
       <div id="admKeys" class="ap-keys">Loading…</div>`;
     v.querySelector('#admCreate').onclick = createKey;
+    v.querySelector('#admRefreshAll').onclick = refreshAllKeys;
     v.querySelector('#admSearch').addEventListener('input', e => { admSearch = e.target.value; paintKeys(); });
     v.querySelectorAll('.ap-filters button').forEach(b => b.addEventListener('click', () => { admFilter = b.dataset.f; renderTab('keys'); }));
     try {
@@ -422,7 +434,7 @@
     }
     if (admSearch) {
       const q = admSearch.toLowerCase();
-      const hay = [k.key_name, k.key_preview, k.activation_ip, k.activation_country, k.activation_city, k.activation_region, k.device_fingerprint].filter(Boolean).join(' ').toLowerCase();
+      const hay = [k.key_name, k.key_preview, k.key_value, k.activation_ip, k.activation_country, k.activation_city, k.activation_region, k.device_fingerprint].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -477,6 +489,7 @@
         <div class="ap-key-actions">
           <button data-act="detail">View activity</button>
           <button data-act="clear">Clear device lock</button>
+          <button data-act="refresh" class="warn">Refresh</button>
           <button data-act="${k.is_revoked ? 'unrevoke' : 'revoke'}">${k.is_revoked ? 'Unrevoke' : 'Revoke'}</button>
           <button data-act="delete" class="danger">Delete</button>
         </div>
@@ -528,10 +541,24 @@
 
   async function keyAction(id, act) {
     if (act === 'detail') return showKeyActivity(id);
+    if (act === 'refresh') {
+      if (!confirm('Refresh this key? Device lock, activation, expiry, and sessions will be wiped — the key becomes brand-new.')) return;
+      try { await api('admin_refresh_key', { session_token: session.session_token, key_id: id }); renderTab(admTab); } catch (e) { alert(e.message); }
+      return;
+    }
     const map = { clear: 'admin_clear_device', revoke: 'admin_revoke_key', unrevoke: 'admin_unrevoke_key', delete: 'admin_delete_key' };
     if (act === 'delete' && !confirm('Permanently delete this key? This cannot be undone.')) return;
     if (act === 'clear' && !confirm('Clear device lock? The key will rebind to the next device that activates it.')) return;
     try { await api(map[act], { session_token: session.session_token, key_id: id }); renderTab('keys'); } catch (e) { alert(e.message); }
+  }
+
+  async function refreshAllKeys() {
+    if (!confirm('Refresh ALL non-admin keys? Every user key will be fully reset (device lock, activation, expiry, sessions cleared). This cannot be undone.')) return;
+    try {
+      const d = await api('admin_refresh_all_keys', { session_token: session.session_token });
+      alert(`Refreshed ${d.count || 0} keys.`);
+      renderTab('keys');
+    } catch (e) { alert(e.message); }
   }
 
   async function createKey() {
@@ -556,6 +583,7 @@
   }
 
   async function renderAlerts(v) {
+    // (renderResellers defined below)
     v.innerHTML = '<div class="ap-loading">Loading alerts…</div>';
     try {
       const d = await api('admin_alerts', { session_token: session.session_token });
@@ -594,6 +622,168 @@
           <div class="ap-audit-meta">${escapeHtml(l.actor_label || l.target_label || '')} ${l.ip_address ? '· ' + escapeHtml(l.ip_address) : ''}</div>
         </div>`).join('')}</div>`;
     } catch (e) { v.innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
+  }
+
+  // ===================== Reseller tab (master only) =====================
+  async function renderResellers(v) {
+    admActiveReseller = null;
+    v.innerHTML = `
+      <div class="ap-create">
+        <div class="ap-create-head"><h4>Create reseller</h4></div>
+        <div class="ap-create-grid">
+          <input id="admResName" placeholder="Reseller name (e.g. CryptoBoss)" />
+          <button id="admResCreate">Create reseller</button>
+        </div>
+        <div id="admResCreatedMsg" class="ap-created"></div>
+      </div>
+      <div id="admResList" class="ap-keys">Loading…</div>`;
+    v.querySelector('#admResCreate').onclick = createReseller;
+    await loadResellers();
+  }
+
+  async function loadResellers() {
+    const list = document.getElementById('admResList');
+    if (!list) return;
+    try {
+      const d = await api('admin_list_reseller_groups', { session_token: session.session_token });
+      admResellersCache = d.groups || [];
+      if (!admResellersCache.length) { list.innerHTML = '<div class="ap-empty">No resellers yet. Create one above.</div>'; return; }
+      list.innerHTML = admResellersCache.map(g => `
+        <div class="ap-key" data-rid="${g.id}">
+          <div class="ap-key-head">
+            <div class="ap-key-dot" style="background:${escapeHtml(g.color || '#5ff7a8')}"></div>
+            <div class="ap-key-main">
+              <div class="ap-key-line">
+                <span class="ap-key-name">${escapeHtml(g.name)}</span>
+                <span class="ap-key-tag">${g.key_count || 0} keys</span>
+              </div>
+              <div class="ap-key-sub">Reseller · created ${timeAgo(g.created_at)}</div>
+            </div>
+            <div class="ap-key-chev">›</div>
+          </div>
+        </div>`).join('');
+      list.querySelectorAll('.ap-key').forEach(row => {
+        row.querySelector('.ap-key-head').addEventListener('click', () => openReseller(row.dataset.rid));
+      });
+    } catch (e) { list.innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
+  }
+
+  async function createReseller() {
+    const name = (document.getElementById('admResName').value || '').trim();
+    const out = document.getElementById('admResCreatedMsg');
+    if (!name) { out.innerHTML = '<div class="ap-err">Name required</div>'; return; }
+    try {
+      await api('admin_create_group', { session_token: session.session_token, name, is_reseller: true });
+      document.getElementById('admResName').value = '';
+      out.innerHTML = '';
+      await loadResellers();
+    } catch (e) { out.innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
+  }
+
+  async function openReseller(gid) {
+    const g = admResellersCache.find(x => x.id === gid);
+    if (!g) return;
+    admActiveReseller = g;
+    const v = document.getElementById('admView');
+    v.innerHTML = `
+      <div class="ap-toolbar" style="justify-content:space-between">
+        <button id="admResBack">← Resellers</button>
+        <div style="flex:1;text-align:center;font-weight:600">${escapeHtml(g.name)}</div>
+        <button id="admResDelete" class="danger">Delete reseller</button>
+      </div>
+      <div class="ap-create">
+        <div class="ap-create-head"><h4>Bulk generate keys</h4></div>
+        <div class="ap-create-grid">
+          <input id="admBulkAmount" type="number" min="1" max="200" value="10" placeholder="Amount (1–200)" />
+          <select id="admBulkType">
+            <option value="daily">Daily · 24h</option>
+            <option value="3day">3-Day</option>
+            <option value="weekly" selected>Weekly</option>
+            <option value="monthly">Monthly · 30d</option>
+            <option value="lifetime">Lifetime</option>
+          </select>
+          <button id="admBulkGo">Generate</button>
+        </div>
+        <div id="admBulkOut" class="ap-created"></div>
+      </div>
+      <div id="admResKeys" class="ap-keys">Loading…</div>`;
+    v.querySelector('#admResBack').onclick = () => renderTab('resellers');
+    v.querySelector('#admResDelete').onclick = () => deleteReseller(g.id, g.name);
+    v.querySelector('#admBulkGo').onclick = () => bulkGenerate(g.id);
+    await loadResellerKeys(g.id);
+  }
+
+  async function loadResellerKeys(gid) {
+    const box = document.getElementById('admResKeys');
+    if (!box) return;
+    try {
+      const d = await api('admin_list_reseller_keys', { session_token: session.session_token, group_id: gid });
+      admResellerKeysCache = d.keys || [];
+      if (!admResellerKeysCache.length) { box.innerHTML = '<div class="ap-empty">No keys generated yet.</div>'; return; }
+      box.innerHTML = admResellerKeysCache.map(k => {
+        const now = Date.now();
+        const expired = k.expires_at && new Date(k.expires_at).getTime() < now;
+        const status = k.is_revoked ? { t: 'Revoked', c: '#ff5d5d' } : expired ? { t: 'Expired', c: '#ff8a5d' } : !k.activated_at ? { t: 'Unused', c: '#9aa7b1' } : { t: 'Active', c: '#5ff7a8' };
+        return `
+        <div class="ap-key" data-id="${k.id}">
+          <div class="ap-key-head">
+            <div class="ap-key-dot" style="background:${status.c}"></div>
+            <div class="ap-key-main">
+              <div class="ap-key-line">
+                <span class="ap-key-name">${escapeHtml(k.key_name || 'Unnamed')}</span>
+                <span class="ap-key-tag">${k.key_type}</span>
+              </div>
+              <div class="ap-key-sub mono">${escapeHtml(k.key_value || k.key_preview)} · ${status.t}</div>
+            </div>
+            <div class="ap-key-actions" style="display:flex;gap:6px">
+              <button data-copy="${escapeHtml(k.key_value || '')}">Copy</button>
+              <button data-act="refresh" class="warn">Refresh</button>
+              <button data-act="delete" class="danger">Delete</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('.ap-key').forEach(row => {
+        row.querySelectorAll('button[data-act]').forEach(btn => btn.addEventListener('click', async e => {
+          e.stopPropagation();
+          const id = row.dataset.id, act = btn.dataset.act;
+          if (act === 'refresh') {
+            if (!confirm('Refresh this key? Full reset.')) return;
+            try { await api('admin_refresh_key', { session_token: session.session_token, key_id: id }); loadResellerKeys(gid); } catch (err) { alert(err.message); }
+          } else if (act === 'delete') {
+            if (!confirm('Delete this key permanently?')) return;
+            try { await api('admin_delete_key', { session_token: session.session_token, key_id: id }); loadResellerKeys(gid); } catch (err) { alert(err.message); }
+          }
+        }));
+        row.querySelectorAll('button[data-copy]').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); copy(btn.dataset.copy, btn); }));
+      });
+    } catch (e) { box.innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
+  }
+
+  async function bulkGenerate(gid) {
+    const amount = Math.max(1, Math.min(200, parseInt(document.getElementById('admBulkAmount').value || '0', 10)));
+    const key_type = document.getElementById('admBulkType').value;
+    const out = document.getElementById('admBulkOut');
+    if (!amount) { out.innerHTML = '<div class="ap-err">Pick 1–200.</div>'; return; }
+    out.innerHTML = '<div class="ap-loading">Generating…</div>';
+    try {
+      const d = await api('admin_generate_bulk_keys', { session_token: session.session_token, group_id: gid, amount, key_type });
+      const created = d.created || [];
+      const csv = created.map(k => `${k.key_name},${k.key_value}`).join('\n');
+      out.innerHTML = `
+        <div class="ap-created-box">
+          <div class="ap-created-lbl">Created ${created.length} ${escapeHtml(key_type)} keys — copy now (name,value):</div>
+          <textarea readonly style="width:100%;min-height:140px;font-family:monospace;font-size:12px">${escapeHtml(csv)}</textarea>
+          <button id="admBulkCopy">Copy all</button>
+        </div>`;
+      document.getElementById('admBulkCopy').onclick = (e) => copy(csv, e.currentTarget);
+      await loadResellerKeys(gid);
+    } catch (e) { out.innerHTML = '<div class="ap-err">' + escapeHtml(e.message) + '</div>'; }
+  }
+
+  async function deleteReseller(gid, name) {
+    if (!confirm(`Delete reseller "${name}" and ALL of its keys? This cannot be undone.`)) return;
+    try { await api('admin_delete_reseller_group', { session_token: session.session_token, group_id: gid }); renderTab('resellers'); } catch (e) { alert(e.message); }
   }
 
   // ---------- utils ----------

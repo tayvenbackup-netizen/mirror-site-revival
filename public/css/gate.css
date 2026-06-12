@@ -514,3 +514,8 @@
 
 
 #adminOverlay .ap-audit-row.fail .ap-audit-act { color: #ff7676; }
+#adminOverlay .ap-key-actions button.warn,
+#adminOverlay .ap-btn-warn { background: rgba(243,201,105,.12); border: 1px solid rgba(243,201,105,.3); color: #f3c969; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+#adminOverlay .ap-key-actions button.warn:hover,
+#adminOverlay .ap-btn-warn:hover { background: rgba(243,201,105,.22); }
+#adminOverlay .ap-create-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
