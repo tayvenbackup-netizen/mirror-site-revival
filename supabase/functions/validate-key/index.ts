@@ -29,15 +29,99 @@ async function readAdminPasswordHash(): Promise<string> {
   return ADMIN_MASTER_KEY_HASH;
 }
 
-async function geoLookup(ip: string): Promise<{ country?: string; region?: string; city?: string }> {
-  if (!ip) return {};
+function isPrivateIp(ip: string): boolean {
+  if (!ip) return true;
+  if (ip === '::1' || ip === '127.0.0.1' || ip === '0.0.0.0') return true;
+  if (ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
+  const m = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (!m) return false;
+  const a = +m[1], b = +m[2];
+  if (a === 10 || a === 127 || a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  return false;
+}
+
+function extractClientIp(req: Request): string {
+  // Preference order — most trusted edge headers first
+  const candidates: string[] = [];
+  const push = (v: string | null) => {
+    if (!v) return;
+    for (const part of v.split(',')) {
+      const ip = part.trim().replace(/^\[|\]$/g, '').split('%')[0];
+      if (ip) candidates.push(ip);
+    }
+  };
+  push(req.headers.get('cf-connecting-ip'));
+  push(req.headers.get('true-client-ip'));
+  push(req.headers.get('fly-client-ip'));
+  push(req.headers.get('x-real-ip'));
+  push(req.headers.get('x-client-ip'));
+  push(req.headers.get('x-forwarded-for'));
+  push(req.headers.get('forwarded')?.match(/for="?([^;,"]+)"?/i)?.[1] || null);
+  // Prefer the first non-private candidate
+  for (const ip of candidates) if (!isPrivateIp(ip)) return ip;
+  return candidates[0] || '';
+}
+
+type Geo = { country?: string; region?: string; city?: string; lat?: number; lon?: number; isp?: string };
+
+async function fetchJson(url: string, timeoutMs = 2500): Promise<any | null> {
   try {
-    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { headers: { 'accept': 'application/json' } });
-    if (!r.ok) return {};
-    const j: any = await r.json();
-    if (!j || j.success === false) return {};
-    return { country: j.country || undefined, region: j.region || undefined, city: j.city || undefined };
-  } catch { return {}; }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const r = await fetch(url, { headers: { accept: 'application/json' }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function geoLookup(ip: string): Promise<Geo> {
+  if (!ip || isPrivateIp(ip)) return {};
+  // Run three providers in parallel and reconcile — yields the highest accuracy in practice.
+  const enc = encodeURIComponent(ip);
+  const [a, b, c] = await Promise.all([
+    fetchJson(`https://ipwho.is/${enc}`),
+    fetchJson(`https://ipapi.co/${enc}/json/`),
+    fetchJson(`https://get.geojs.io/v1/ip/geo/${enc}.json`),
+  ]);
+  const norm = (j: any): Geo => {
+    if (!j || j.error || j.success === false) return {};
+    return {
+      country: j.country_name || j.country || undefined,
+      region: j.region || j.region_name || j.state || undefined,
+      city: j.city || undefined,
+      lat: Number(j.latitude ?? j.lat) || undefined,
+      lon: Number(j.longitude ?? j.lon) || undefined,
+      isp: j.connection?.isp || j.org || j.organization_name || j.asn_org || undefined,
+    };
+  };
+  const sources = [norm(a), norm(b), norm(c)];
+  // Majority vote per field (falls back to first non-empty).
+  const pick = (k: keyof Geo): any => {
+    const counts = new Map<string, { v: any; n: number }>();
+    for (const s of sources) {
+      const v = s[k];
+      if (v === undefined || v === null || v === '') continue;
+      const key = String(v).toLowerCase();
+      const cur = counts.get(key);
+      if (cur) cur.n++; else counts.set(key, { v, n: 1 });
+    }
+    let best: { v: any; n: number } | null = null;
+    for (const c of counts.values()) if (!best || c.n > best.n) best = c;
+    return best?.v;
+  };
+  return {
+    country: pick('country'),
+    region: pick('region'),
+    city: pick('city'),
+    lat: pick('lat'),
+    lon: pick('lon'),
+    isp: pick('isp'),
+  };
 }
 
 async function sha256(s: string): Promise<string> {
@@ -620,7 +704,7 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Bad JSON' }, 400); }
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+  const ip = extractClientIp(req);
   const ua = req.headers.get('user-agent') || '';
   const action = String(body.action || '');
 

@@ -4,25 +4,88 @@
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bm56dGJ0bXp4dmFnZHhneGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTAzNzQsImV4cCI6MjA5NjUyNjM3NH0.7lzYZZWfV4AwxB0I5iUePIld2lW5zMQIKpcej6MK2-s';
   const API = SUPABASE_URL + '/functions/v1/validate-key';
   const SKEY = 'tw_gate_session_v1';
-  const FP_KEY = 'tw_gate_fp_v1';
+  const FP_KEY = 'tw_gate_fp_v2';
 
-  function fp() {
-    let v = localStorage.getItem(FP_KEY);
-    if (v) return v;
-    const sig = [navigator.userAgent, navigator.language, screen.width + 'x' + screen.height,
-      new Date().getTimezoneOffset(), navigator.hardwareConcurrency || '',
-      navigator.platform || '', navigator.maxTouchPoints || ''].join('|');
-    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-    for (let i = 0; i < sig.length; i++) { const c = sig.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
-    v = (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36) + Math.random().toString(36).slice(2, 8);
-    localStorage.setItem(FP_KEY, v); return v;
+  function canvasSig() {
+    try {
+      const c = document.createElement('canvas'); c.width = 280; c.height = 60;
+      const ctx = c.getContext('2d'); if (!ctx) return '';
+      ctx.textBaseline = 'top';
+      ctx.font = "14px 'Arial'";
+      ctx.fillStyle = '#f60'; ctx.fillRect(125, 1, 62, 20);
+      ctx.fillStyle = '#069'; ctx.fillText('TW-Gate \u{1F512} fingerprint', 2, 15);
+      ctx.fillStyle = 'rgba(102,204,0,0.7)'; ctx.fillText('TW-Gate \u{1F512} fingerprint', 4, 17);
+      return c.toDataURL();
+    } catch { return ''; }
   }
-  const DEVICE_FP = fp();
+  function webglSig() {
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) return '';
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const v = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
+      const r = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+      return [v, r, gl.getParameter(gl.VERSION), gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+              gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_VIEWPORT_DIMS)].join('|');
+    } catch { return ''; }
+  }
+  async function sha256Hex(s) {
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    } catch {
+      let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+      for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+      return (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16);
+    }
+  }
+  async function computeFp() {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || '';
+    const sig = [
+      navigator.userAgent || '',
+      navigator.language || '',
+      (navigator.languages || []).join(','),
+      screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+      (screen.availWidth || '') + 'x' + (screen.availHeight || ''),
+      window.devicePixelRatio || '',
+      new Date().getTimezoneOffset(),
+      tz,
+      navigator.hardwareConcurrency || '',
+      navigator.deviceMemory || '',
+      navigator.platform || '',
+      navigator.maxTouchPoints || '',
+      navigator.vendor || '',
+      navigator.pdfViewerEnabled ? '1' : '0',
+      (navigator.userAgentData && navigator.userAgentData.platform) || '',
+      canvasSig(),
+      webglSig(),
+    ].join('|');
+    return await sha256Hex(sig);
+  }
+  // Synchronous fallback for first paint, replaced by precise async hash on load.
+  let DEVICE_FP = localStorage.getItem(FP_KEY) || '';
+  if (!DEVICE_FP) {
+    const tmp = (navigator.userAgent + '|' + screen.width + 'x' + screen.height + '|' + new Date().getTimezoneOffset());
+    let h1 = 0xdeadbeef; for (let i = 0; i < tmp.length; i++) h1 = Math.imul(h1 ^ tmp.charCodeAt(i), 2654435761);
+    DEVICE_FP = 'tmp_' + (h1 >>> 0).toString(36);
+  }
+  const FP_READY = (async () => {
+    try {
+      const stable = await computeFp();
+      if (stable) {
+        DEVICE_FP = stable;
+        localStorage.setItem(FP_KEY, stable);
+      }
+    } catch {}
+    return DEVICE_FP;
+  })();
 
   let session = null;
   try { session = JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch {}
 
   async function api(action, body) {
+    await FP_READY;
     const r = await fetch(API, {
       method: 'POST',
       headers: {
@@ -50,6 +113,7 @@
   async function loadAppBundle() {
     if (__bundleLoaded) return true;
     if (!session?.session_token) return false;
+    await FP_READY;
     try {
       const r = await fetch(SUPABASE_URL + '/functions/v1/get-app-bundle', {
         method: 'POST',
