@@ -676,6 +676,50 @@ async function handleAdmin(action: string, body: any) {
     return json({ ok: true });
   }
 
+  // -------- Device approval requests (2nd-device flow) --------
+  if (action === 'admin_list_device_requests' || action === 'list_device_requests') {
+    const { data: reqs } = await admin.from('device_requests')
+      .select('*').order('requested_at', { ascending: false }).limit(200);
+    const ids = Array.from(new Set((reqs || []).map((r: any) => r.key_id)));
+    let keyMap: Record<string, any> = {};
+    if (ids.length) {
+      const { data: ks } = await admin.from('access_keys')
+        .select('id,key_name,key_preview').in('id', ids);
+      (ks || []).forEach((k: any) => { keyMap[k.id] = k; });
+    }
+    const requests = (reqs || []).map((r: any) => ({
+      ...r,
+      key_name: keyMap[r.key_id]?.key_name || null,
+      key_preview: keyMap[r.key_id]?.key_preview || null,
+    }));
+    return json({ requests });
+  }
+
+  if (action === 'admin_approve_device_request' || action === 'approve_device_request') {
+    const rid = String(body.request_id || '');
+    if (!rid) return json({ error: 'request_id required' }, 400);
+    const { data: r } = await admin.from('device_requests').select('*').eq('id', rid).maybeSingle();
+    if (!r) return json({ error: 'Not found' }, 404);
+    await admin.from('device_requests').update({ status: 'approved', decided_at: new Date().toISOString() }).eq('id', rid);
+    // Pre-approve the new device by re-binding the key's fingerprint and bumping device slot count.
+    await admin.from('access_keys').update({
+      device_fingerprint: r.device_fingerprint,
+      hwid: r.hwid || null,
+      device_count: 2,
+    }).eq('id', r.key_id);
+    await admin.from('access_sessions').delete().eq('key_id', r.key_id);
+    await audit('device_request_approve', { actor_id: gate.row.id, target_id: r.key_id });
+    return json({ ok: true });
+  }
+
+  if (action === 'admin_deny_device_request' || action === 'deny_device_request') {
+    const rid = String(body.request_id || '');
+    if (!rid) return json({ error: 'request_id required' }, 400);
+    await admin.from('device_requests').update({ status: 'denied', decided_at: new Date().toISOString() }).eq('id', rid);
+    await audit('device_request_deny', { actor_id: gate.row.id, target_id: rid });
+    return json({ ok: true });
+  }
+
   if (action === 'admin_key_detail') {
     const { data: row } = await admin.from('access_keys').select('*').eq('id', body.key_id).maybeSingle();
     if (!row) return json({ error: 'Not found' }, 404);
