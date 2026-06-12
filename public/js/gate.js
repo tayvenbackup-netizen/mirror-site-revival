@@ -251,6 +251,9 @@
   let admKeysCache = [];
   let admSearch = '';
   let admFilter = 'all';
+  let admResellersCache = [];
+  let admActiveReseller = null; // { id, name }
+  let admResellerKeysCache = [];
 
   function buildAdmin() {
     const existing = document.getElementById('adminOverlay');
@@ -284,6 +287,7 @@
           <nav class="ap-tabs">
             <button data-t="overview" class="active">Overview</button>
             <button data-t="keys">Keys</button>
+            <button data-t="resellers" data-master-only="1" hidden>Resellers</button>
             <button data-t="alerts">Alerts <span id="admAlertsBadge" class="ap-badge" hidden>0</span></button>
             <button data-t="audit">Audit</button>
           </nav>
@@ -312,6 +316,9 @@
       if (!d?.ok) throw new Error(d?.error || 'Invalid password');
       document.querySelector('#adminOverlay .ap-gate').style.display = 'none';
       document.querySelector('#adminOverlay .ap-body').hidden = false;
+      // Show master-only tabs (Resellers)
+      const isMaster = !!session?.is_admin && !session?.is_sub_admin;
+      document.querySelectorAll('#adminOverlay [data-master-only]').forEach(el => { el.hidden = !isMaster; });
       renderTab('overview');
       refreshAlertsBadge();
     } catch (e) {
@@ -334,6 +341,7 @@
     if (!v) return;
     if (t === 'overview') return renderOverview(v);
     if (t === 'keys') return renderKeys(v);
+    if (t === 'resellers') return renderResellers(v);
     if (t === 'alerts') return renderAlerts(v);
     if (t === 'audit') return renderAudit(v);
   }
@@ -378,7 +386,10 @@
   async function renderKeys(v) {
     v.innerHTML = `
       <div class="ap-create">
-        <div class="ap-create-head"><h4>Create new key</h4></div>
+        <div class="ap-create-head">
+          <h4>Create new key</h4>
+          <button id="admRefreshAll" class="ap-btn-warn" title="Reset every non-admin key">Refresh all keys</button>
+        </div>
         <div class="ap-create-grid">
           <input id="admNewName" placeholder="Label (e.g. Client A)" />
           <input id="admNewValue" placeholder="Custom value (blank = random)" />
@@ -395,13 +406,14 @@
         <div id="admCreated" class="ap-created"></div>
       </div>
       <div class="ap-toolbar">
-        <input id="admSearch" placeholder="Search by name, value, IP, country…" value="${escapeHtml(admSearch)}"/>
+        <input id="admSearch" placeholder="Search by name, key value, preview, IP, country…" value="${escapeHtml(admSearch)}"/>
         <div class="ap-filters">
           ${['all','active','revoked','expiring','sub'].map(f => `<button data-f="${f}" class="${admFilter===f?'on':''}">${f}</button>`).join('')}
         </div>
       </div>
       <div id="admKeys" class="ap-keys">Loading…</div>`;
     v.querySelector('#admCreate').onclick = createKey;
+    v.querySelector('#admRefreshAll').onclick = refreshAllKeys;
     v.querySelector('#admSearch').addEventListener('input', e => { admSearch = e.target.value; paintKeys(); });
     v.querySelectorAll('.ap-filters button').forEach(b => b.addEventListener('click', () => { admFilter = b.dataset.f; renderTab('keys'); }));
     try {
@@ -422,7 +434,7 @@
     }
     if (admSearch) {
       const q = admSearch.toLowerCase();
-      const hay = [k.key_name, k.key_preview, k.activation_ip, k.activation_country, k.activation_city, k.activation_region, k.device_fingerprint].filter(Boolean).join(' ').toLowerCase();
+      const hay = [k.key_name, k.key_preview, k.key_value, k.activation_ip, k.activation_country, k.activation_city, k.activation_region, k.device_fingerprint].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -477,6 +489,7 @@
         <div class="ap-key-actions">
           <button data-act="detail">View activity</button>
           <button data-act="clear">Clear device lock</button>
+          <button data-act="refresh" class="warn">Refresh</button>
           <button data-act="${k.is_revoked ? 'unrevoke' : 'revoke'}">${k.is_revoked ? 'Unrevoke' : 'Revoke'}</button>
           <button data-act="delete" class="danger">Delete</button>
         </div>
@@ -528,10 +541,24 @@
 
   async function keyAction(id, act) {
     if (act === 'detail') return showKeyActivity(id);
+    if (act === 'refresh') {
+      if (!confirm('Refresh this key? Device lock, activation, expiry, and sessions will be wiped — the key becomes brand-new.')) return;
+      try { await api('admin_refresh_key', { session_token: session.session_token, key_id: id }); renderTab(admTab); } catch (e) { alert(e.message); }
+      return;
+    }
     const map = { clear: 'admin_clear_device', revoke: 'admin_revoke_key', unrevoke: 'admin_unrevoke_key', delete: 'admin_delete_key' };
     if (act === 'delete' && !confirm('Permanently delete this key? This cannot be undone.')) return;
     if (act === 'clear' && !confirm('Clear device lock? The key will rebind to the next device that activates it.')) return;
     try { await api(map[act], { session_token: session.session_token, key_id: id }); renderTab('keys'); } catch (e) { alert(e.message); }
+  }
+
+  async function refreshAllKeys() {
+    if (!confirm('Refresh ALL non-admin keys? Every user key will be fully reset (device lock, activation, expiry, sessions cleared). This cannot be undone.')) return;
+    try {
+      const d = await api('admin_refresh_all_keys', { session_token: session.session_token });
+      alert(`Refreshed ${d.count || 0} keys.`);
+      renderTab('keys');
+    } catch (e) { alert(e.message); }
   }
 
   async function createKey() {
