@@ -113,6 +113,7 @@
   async function loadAppBundle() {
     if (__bundleLoaded) return true;
     if (!session?.session_token) return false;
+    await FP_READY;
     try {
       const r = await fetch(SUPABASE_URL + '/functions/v1/get-app-bundle', {
         method: 'POST',
