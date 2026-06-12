@@ -583,6 +583,7 @@
   }
 
   async function renderAlerts(v) {
+    // (renderResellers defined below)
     v.innerHTML = '<div class="ap-loading">Loading alerts…</div>';
     try {
       const d = await api('admin_alerts', { session_token: session.session_token });
