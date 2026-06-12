@@ -6,8 +6,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-fingerprint, x-session-token, x-csrf-token',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-token, x-csrf-token, x-device-fingerprint, x-session-token',
+  'Access-Control-Max-Age': '86400',
 };
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
