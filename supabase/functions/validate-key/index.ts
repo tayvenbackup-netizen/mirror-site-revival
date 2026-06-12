@@ -216,7 +216,7 @@ async function audit(action: string, opts: Record<string, unknown> = {}) {
   try { await admin.from('audit_logs').insert({ action, actor_type: 'system', ...opts }); } catch {}
 }
 
-async function handleValidate(key: string, fp: string, ip: string, ua: string) {
+async function handleValidate(key: string, fp: string, ip: string, ua: string, hwid: string = '') {
   if (!key || typeof key !== 'string' || !key.trim()) return json({ error: 'Key required' }, 400);
   const trimmed = key.trim();
   const hash = await sha256(trimmed);
@@ -266,7 +266,21 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
       attempt_country: geo.country, attempt_region: geo.region, attempt_city: geo.city,
       device_info: ua, reason: 'device_mismatch', blocked: true,
     });
-    return json({ error: 'This key is bound to another device' }, 403);
+    // Instead of rejecting outright, create (or reuse) a pending approval request.
+    const { data: existing } = await admin.from('device_requests')
+      .select('id,status')
+      .eq('key_id', row.id).eq('device_fingerprint', fp).eq('status', 'pending')
+      .maybeSingle();
+    if (existing) {
+      // Check if it was already approved/denied in a prior cycle (shouldn't be, but guard).
+    } else {
+      await admin.from('device_requests').insert({
+        key_id: row.id, device_fingerprint: fp, hwid: hwid || null, ip: ip || null,
+        user_agent: ua || null, country: geo.country || null, region: geo.region || null,
+        city: geo.city || null, status: 'pending',
+      });
+    }
+    return json({ pending_approval: true });
   }
 
   // Activate / bind on first use
@@ -277,6 +291,8 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
     if (dur) patch.expires_at = new Date(Date.now() + dur).toISOString();
     // Capture activation location once
     patch.activation_ip = ip || null;
+    patch.activation_user_agent = ua || null;
+    if (hwid) patch.hwid = hwid;
     const geo = await geoLookup(ip);
     if (geo.country) patch.activation_country = geo.country;
     if (geo.region)  patch.activation_region  = geo.region;
