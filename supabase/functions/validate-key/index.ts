@@ -6,8 +6,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-fingerprint, x-session-token, x-csrf-token',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-token, x-csrf-token, x-device-fingerprint, x-session-token',
+  'Access-Control-Max-Age': '86400',
 };
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
@@ -215,7 +216,7 @@ async function audit(action: string, opts: Record<string, unknown> = {}) {
   try { await admin.from('audit_logs').insert({ action, actor_type: 'system', ...opts }); } catch {}
 }
 
-async function handleValidate(key: string, fp: string, ip: string, ua: string) {
+async function handleValidate(key: string, fp: string, ip: string, ua: string, hwid: string = '') {
   if (!key || typeof key !== 'string' || !key.trim()) return json({ error: 'Key required' }, 400);
   const trimmed = key.trim();
   const hash = await sha256(trimmed);
@@ -265,7 +266,21 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
       attempt_country: geo.country, attempt_region: geo.region, attempt_city: geo.city,
       device_info: ua, reason: 'device_mismatch', blocked: true,
     });
-    return json({ error: 'This key is bound to another device' }, 403);
+    // Instead of rejecting outright, create (or reuse) a pending approval request.
+    const { data: existing } = await admin.from('device_requests')
+      .select('id,status')
+      .eq('key_id', row.id).eq('device_fingerprint', fp).eq('status', 'pending')
+      .maybeSingle();
+    if (existing) {
+      // Check if it was already approved/denied in a prior cycle (shouldn't be, but guard).
+    } else {
+      await admin.from('device_requests').insert({
+        key_id: row.id, device_fingerprint: fp, hwid: hwid || null, ip: ip || null,
+        user_agent: ua || null, country: geo.country || null, region: geo.region || null,
+        city: geo.city || null, status: 'pending',
+      });
+    }
+    return json({ pending_approval: true });
   }
 
   // Activate / bind on first use
@@ -276,6 +291,8 @@ async function handleValidate(key: string, fp: string, ip: string, ua: string) {
     if (dur) patch.expires_at = new Date(Date.now() + dur).toISOString();
     // Capture activation location once
     patch.activation_ip = ip || null;
+    patch.activation_user_agent = ua || null;
+    if (hwid) patch.hwid = hwid;
     const geo = await geoLookup(ip);
     if (geo.country) patch.activation_country = geo.country;
     if (geo.region)  patch.activation_region  = geo.region;
@@ -458,7 +475,7 @@ async function handleAdmin(action: string, body: any) {
     // Exclude keys that belong to a reseller group — those live in the Reseller tab only.
     const { data: rgs } = await admin.from('key_groups').select('id').eq('is_reseller', true);
     const resellerGroupIds = new Set((rgs || []).map((g: any) => g.id));
-    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_value,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city,group_id').order('created_at', { ascending: false });
+    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_value,key_type,activated_at,expires_at,is_revoked,device_fingerprint,device_count,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city,activation_user_agent,hwid,group_id').order('created_at', { ascending: false });
     const keys = (data || []).filter((k: any) => !k.group_id || !resellerGroupIds.has(k.group_id));
     const ids = keys.map(k => k.id);
     let lastSeen: Record<string, string> = {};
@@ -475,7 +492,7 @@ async function handleAdmin(action: string, body: any) {
       const at = await admin.from('device_attempts').select('key_id').in('key_id', ids);
       (at.data || []).forEach((r: any) => { attemptCounts[r.key_id] = (attemptCounts[r.key_id] || 0) + 1; });
     }
-    return json({ keys: keys.map(k => ({ ...k, last_seen: lastSeen[k.id] || null, alert_count: alertCounts[k.id] || 0, attempt_count: attemptCounts[k.id] || 0 })) });
+    return json({ keys: keys.map(k => ({ ...k, last_seen: lastSeen[k.id] || null, last_seen_at: lastSeen[k.id] || null, alert_count: alertCounts[k.id] || 0, attempt_count: attemptCounts[k.id] || 0 })) });
   }
 
   if (action === 'admin_create_key') {
@@ -659,6 +676,50 @@ async function handleAdmin(action: string, body: any) {
     return json({ ok: true });
   }
 
+  // -------- Device approval requests (2nd-device flow) --------
+  if (action === 'admin_list_device_requests' || action === 'list_device_requests') {
+    const { data: reqs } = await admin.from('device_requests')
+      .select('*').order('requested_at', { ascending: false }).limit(200);
+    const ids = Array.from(new Set((reqs || []).map((r: any) => r.key_id)));
+    let keyMap: Record<string, any> = {};
+    if (ids.length) {
+      const { data: ks } = await admin.from('access_keys')
+        .select('id,key_name,key_preview').in('id', ids);
+      (ks || []).forEach((k: any) => { keyMap[k.id] = k; });
+    }
+    const requests = (reqs || []).map((r: any) => ({
+      ...r,
+      key_name: keyMap[r.key_id]?.key_name || null,
+      key_preview: keyMap[r.key_id]?.key_preview || null,
+    }));
+    return json({ requests });
+  }
+
+  if (action === 'admin_approve_device_request' || action === 'approve_device_request') {
+    const rid = String(body.request_id || '');
+    if (!rid) return json({ error: 'request_id required' }, 400);
+    const { data: r } = await admin.from('device_requests').select('*').eq('id', rid).maybeSingle();
+    if (!r) return json({ error: 'Not found' }, 404);
+    await admin.from('device_requests').update({ status: 'approved', decided_at: new Date().toISOString() }).eq('id', rid);
+    // Pre-approve the new device by re-binding the key's fingerprint and bumping device slot count.
+    await admin.from('access_keys').update({
+      device_fingerprint: r.device_fingerprint,
+      hwid: r.hwid || null,
+      device_count: 2,
+    }).eq('id', r.key_id);
+    await admin.from('access_sessions').delete().eq('key_id', r.key_id);
+    await audit('device_request_approve', { actor_id: gate.row.id, target_id: r.key_id });
+    return json({ ok: true });
+  }
+
+  if (action === 'admin_deny_device_request' || action === 'deny_device_request') {
+    const rid = String(body.request_id || '');
+    if (!rid) return json({ error: 'request_id required' }, 400);
+    await admin.from('device_requests').update({ status: 'denied', decided_at: new Date().toISOString() }).eq('id', rid);
+    await audit('device_request_deny', { actor_id: gate.row.id, target_id: rid });
+    return json({ ok: true });
+  }
+
   if (action === 'admin_key_detail') {
     const { data: row } = await admin.from('access_keys').select('*').eq('id', body.key_id).maybeSingle();
     if (!row) return json({ error: 'Not found' }, 404);
@@ -697,8 +758,35 @@ async function handleAdmin(action: string, body: any) {
   return json({ error: 'Unknown admin action' }, 400);
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function handleResetMasterPassword(body: any) {
+  const expected = Deno.env.get('MASTER_RESET_TOKEN') || '';
+  const provided = String(body.reset_token || '');
+  if (!expected || !timingSafeEqual(provided, expected)) {
+    await audit('master_password_reset_fail', { success: false });
+    return json({ error: 'Invalid reset token' }, 401);
+  }
+  const newPw = String(body.new_password || '');
+  if (newPw.length < 8) return json({ error: 'Password too short' }, 400);
+  const hash = await sha256(newPw);
+  await admin.from('app_settings').upsert({
+    id: 'admin_console',
+    value: { password_hash: hash },
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'id' });
+  await audit('master_password_reset_ok', { success: true });
+  return json({ ok: true });
+}
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
   let body: any;
@@ -709,7 +797,8 @@ Deno.serve(async (req) => {
   const action = String(body.action || '');
 
   try {
-    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua);
+    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua, body.hwid || '');
+    if (action === 'reset_master_password') return await handleResetMasterPassword(body);
     if (action === 'check_session') return await handleCheckSession(body.session_token, body.device_fingerprint, ip, ua);
     if (action === 'session_heartbeat') return await handleHeartbeat(body.session_token, body.device_fingerprint, ip, ua);
     if (action === 'logout') return await handleLogout(body.session_token);
