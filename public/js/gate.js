@@ -70,20 +70,22 @@
     let h1 = 0xdeadbeef; for (let i = 0; i < tmp.length; i++) h1 = Math.imul(h1 ^ tmp.charCodeAt(i), 2654435761);
     DEVICE_FP = 'tmp_' + (h1 >>> 0).toString(36);
   }
-  (async () => {
+  const FP_READY = (async () => {
     try {
       const stable = await computeFp();
-      if (stable && stable !== DEVICE_FP) {
+      if (stable) {
         DEVICE_FP = stable;
         localStorage.setItem(FP_KEY, stable);
       }
     } catch {}
+    return DEVICE_FP;
   })();
 
   let session = null;
   try { session = JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch {}
 
   async function api(action, body) {
+    await FP_READY;
     const r = await fetch(API, {
       method: 'POST',
       headers: {
