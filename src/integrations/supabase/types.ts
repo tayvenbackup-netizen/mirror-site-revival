@@ -21,6 +21,7 @@ export type Database = {
           activation_country: string | null
           activation_ip: string | null
           activation_region: string | null
+          activation_user_agent: string | null
           addresses: Json
           created_at: string
           created_by: string | null
@@ -28,6 +29,7 @@ export type Database = {
           device_fingerprint: string | null
           expires_at: string | null
           group_id: string | null
+          hwid: string | null
           id: string
           is_revoked: boolean
           is_sub_admin: boolean
@@ -46,6 +48,7 @@ export type Database = {
           activation_country?: string | null
           activation_ip?: string | null
           activation_region?: string | null
+          activation_user_agent?: string | null
           addresses?: Json
           created_at?: string
           created_by?: string | null
@@ -53,6 +56,7 @@ export type Database = {
           device_fingerprint?: string | null
           expires_at?: string | null
           group_id?: string | null
+          hwid?: string | null
           id?: string
           is_revoked?: boolean
           is_sub_admin?: boolean
@@ -71,6 +75,7 @@ export type Database = {
           activation_country?: string | null
           activation_ip?: string | null
           activation_region?: string | null
+          activation_user_agent?: string | null
           addresses?: Json
           created_at?: string
           created_by?: string | null
@@ -78,6 +83,7 @@ export type Database = {
           device_fingerprint?: string | null
           expires_at?: string | null
           group_id?: string | null
+          hwid?: string | null
           id?: string
           is_revoked?: boolean
           is_sub_admin?: boolean
@@ -229,6 +235,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "device_attempts_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "access_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_requests: {
+        Row: {
+          city: string | null
+          country: string | null
+          decided_at: string | null
+          device_fingerprint: string | null
+          hwid: string | null
+          id: string
+          ip: string | null
+          key_id: string
+          reason: string | null
+          region: string | null
+          requested_at: string
+          status: string
+          user_agent: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          decided_at?: string | null
+          device_fingerprint?: string | null
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          key_id: string
+          reason?: string | null
+          region?: string | null
+          requested_at?: string
+          status?: string
+          user_agent?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          decided_at?: string | null
+          device_fingerprint?: string | null
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          key_id?: string
+          reason?: string | null
+          region?: string | null
+          requested_at?: string
+          status?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_requests_key_id_fkey"
             columns: ["key_id"]
             isOneToOne: false
             referencedRelation: "access_keys"
