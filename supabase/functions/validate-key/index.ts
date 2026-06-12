@@ -371,8 +371,11 @@ async function handleAdmin(action: string, body: any) {
   }
 
   if (action === 'admin_list_keys') {
-    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city').order('created_at', { ascending: false });
-    const keys = data || [];
+    // Exclude keys that belong to a reseller group — those live in the Reseller tab only.
+    const { data: rgs } = await admin.from('key_groups').select('id').eq('is_reseller', true);
+    const resellerGroupIds = new Set((rgs || []).map((g: any) => g.id));
+    const { data } = await admin.from('access_keys').select('id,key_preview,key_name,key_value,key_type,activated_at,expires_at,is_revoked,device_fingerprint,session_count,created_at,addresses,pending_transfers,is_sub_admin,activation_ip,activation_country,activation_region,activation_city,group_id').order('created_at', { ascending: false });
+    const keys = (data || []).filter((k: any) => !k.group_id || !resellerGroupIds.has(k.group_id));
     const ids = keys.map(k => k.id);
     let lastSeen: Record<string, string> = {};
     let alertCounts: Record<string, number> = {};
