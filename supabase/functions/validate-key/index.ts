@@ -704,7 +704,7 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'Bad JSON' }, 400); }
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+  const ip = extractClientIp(req);
   const ua = req.headers.get('user-agent') || '';
   const action = String(body.action || '');
 
