@@ -758,8 +758,35 @@ async function handleAdmin(action: string, body: any) {
   return json({ error: 'Unknown admin action' }, 400);
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function handleResetMasterPassword(body: any) {
+  const expected = Deno.env.get('MASTER_RESET_TOKEN') || '';
+  const provided = String(body.reset_token || '');
+  if (!expected || !timingSafeEqual(provided, expected)) {
+    await audit('master_password_reset_fail', { success: false });
+    return json({ error: 'Invalid reset token' }, 401);
+  }
+  const newPw = String(body.new_password || '');
+  if (newPw.length < 8) return json({ error: 'Password too short' }, 400);
+  const hash = await sha256(newPw);
+  await admin.from('app_settings').upsert({
+    id: 'admin_console',
+    value: { password_hash: hash },
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'id' });
+  await audit('master_password_reset_ok', { success: true });
+  return json({ ok: true });
+}
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
   let body: any;
@@ -770,7 +797,8 @@ Deno.serve(async (req) => {
   const action = String(body.action || '');
 
   try {
-    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua);
+    if (action === 'validate') return await handleValidate(body.key, body.device_fingerprint || '', ip, ua, body.hwid || '');
+    if (action === 'reset_master_password') return await handleResetMasterPassword(body);
     if (action === 'check_session') return await handleCheckSession(body.session_token, body.device_fingerprint, ip, ua);
     if (action === 'session_heartbeat') return await handleHeartbeat(body.session_token, body.device_fingerprint, ip, ua);
     if (action === 'logout') return await handleLogout(body.session_token);
